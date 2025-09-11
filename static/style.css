@@ -54,9 +54,13 @@ body {
 }
 
 .chat-input {
-  display: flex;
   padding: 20px;
   background-color: #f8f9fa;
+}
+
+.input-section {
+  display: flex;
+  margin-bottom: 10px;
 }
 
 #user-input {
@@ -67,9 +71,28 @@ body {
   font-size: 16px;
 }
 
+#image-input {
+  display: none;
+}
+
+#image-button {
+  padding: 10px 15px;
+  margin-left: 5px;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#image-button:hover {
+  background-color: #138496;
+}
+
 #send-button {
   padding: 10px 20px;
-  margin-left: 10px;
+  margin-left: 5px;
   background-color: #4caf50;
   color: white;
   border: none;
@@ -85,6 +108,48 @@ body {
 #send-button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
+}
+
+.image-preview {
+  display: none;
+  position: relative;
+  margin-top: 10px;
+}
+
+.image-preview img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+
+#remove-image {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#remove-image:hover {
+  background-color: #c82333;
+}
+
+.message-image {
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: 5px;
+  margin-top: 10px;
+  border: 1px solid #ddd;
 }
 
 .typing {
