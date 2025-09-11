@@ -1,30 +1,449 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Vehicle Diagnostics Chatbot</title>
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Diagnostics AI Chatbot</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
+        .diagnostic-result {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .code-id {
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .priority {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .priority.high {
+            background: #ff4757;
+            color: white;
+        }
+
+        .priority.medium {
+            background: #ffa502;
+            color: white;
+        }
+
+        .priority.low {
+            background: #2ed573;
+            color: white;
+        }
+
+        .confidence {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .causes-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .causes-list li {
+            padding: 3px 0;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .causes-list li::before {
+            content: "• ";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .analysis-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #1976d2;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        #user-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        #send-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        #send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        #send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '...';
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0%, 33% { content: '.'; }
+            34%, 66% { content: '..'; }
+            67%, 100% { content: '...'; }
+        }
+
+        .examples {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .examples h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .example-btn {
+            background: #e8e8e8;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #555;
+            transition: background 0.2s;
+        }
+
+        .example-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
     <div class="chat-container">
-      <div class="chat-header">
-        <h1>Vehicle Diagnostics Chatbot</h1>
-      </div>
-      <div class="chat-box" id="chat-box">
-        <!-- Chat messages will be appended here -->
-      </div>
-      <div class="chat-input">
-        <input
-          type="text"
-          id="user-input"
-          placeholder="Ask a question about your vehicle..."
-        />
-        <button id="send-button">Send</button>
-      </div>
+        <div class="chat-header">
+            <h1>🚗 Vehicle Diagnostics AI</h1>
+            <p>Describe your vehicle problem and get instant OBD code diagnostics</p>
+        </div>
+        
+        <div class="chat-box" id="chat-box">
+            <div class="examples">
+                <h3>Try asking about these common issues:</h3>
+                <div class="example-buttons">
+                    <button class="example-btn" onclick="sendExample('My car has a rough idle and engine misfire')">Engine misfire</button>
+                    <button class="example-btn" onclick="sendExample('Check engine light is on, oxygen sensor issue')">O2 sensor problem</button>
+                    <button class="example-btn" onclick="sendExample('Gas cap is loose and I smell fuel vapors')">Fuel vapor leak</button>
+                    <button class="example-btn" onclick="sendExample('Engine is running cold, thermostat problem')">Thermostat issue</button>
+                    <button class="example-btn" onclick="sendExample('Hearing knocking sounds from engine')">Engine knock</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Describe your vehicle problem (e.g., 'engine misfire', 'check engine light', 'rough idle')..." />
+            <button id="send-button">Send</button>
+        </div>
     </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-  </body>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        function addMessage(content, isUser = false) {
+            const message = document.createElement('div');
+            message.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            if (typeof content === 'string') {
+                messageContent.innerHTML = content;
+            } else {
+                messageContent.appendChild(content);
+            }
+            
+            message.appendChild(messageContent);
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function createDiagnosticResult(match) {
+            const result = document.createElement('div');
+            result.className = 'diagnostic-result';
+            
+            const priorityClass = match.priority.toLowerCase();
+            
+            result.innerHTML = `
+                <div class="code-header">
+                    <span class="code-id">${match.code}</span>
+                    <div>
+                        <span class="priority ${priorityClass}">${match.priority}</span>
+                        <span class="confidence">Confidence: ${match.confidence}</span>
+                    </div>
+                </div>
+                <div class="description">${match.description}</div>
+                <div>
+                    <strong>Common Causes:</strong>
+                    <ul class="causes-list">
+                        ${match.common_causes.map(cause => `<li>${cause}</li>`).join('')}
+                    </ul>
+                </div>
+                ${match.likely_cause ? `<div style="margin-top: 8px;"><strong>Most Likely:</strong> ${match.likely_cause}</div>` : ''}
+            `;
+            
+            return result;
+        }
+
+        function showLoading() {
+            addMessage('<div class="loading">Analyzing your vehicle problem<span class="loading-dots"></span></div>');
+        }
+
+        function removeLoading() {
+            const loadingMessages = chatBox.querySelectorAll('.loading');
+            loadingMessages.forEach(msg => {
+                msg.closest('.message').remove();
+            });
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            userInput.value = '';
+            
+            // Show loading
+            showLoading();
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('/diagnose', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                removeLoading();
+
+                if (data.success) {
+                    if (data.matches && data.matches.length > 0) {
+                        // Create container for all results
+                        const resultsContainer = document.createElement('div');
+                        
+                        // Add summary
+                        const summary = document.createElement('div');
+                        summary.innerHTML = `<strong>${data.message}</strong>`;
+                        resultsContainer.appendChild(summary);
+                        
+                        // Add each diagnostic result
+                        data.matches.forEach(match => {
+                            resultsContainer.appendChild(createDiagnosticResult(match));
+                        });
+                        
+                        // Add analysis info if available
+                        if (data.analysis && data.analysis.detected_symptoms.length > 0) {
+                            const analysisInfo = document.createElement('div');
+                            analysisInfo.className = 'analysis-info';
+                            analysisInfo.innerHTML = `
+                                <strong>Detected symptoms:</strong> ${data.analysis.detected_symptoms.join(', ')}
+                            `;
+                            resultsContainer.appendChild(analysisInfo);
+                        }
+                        
+                        addMessage(resultsContainer);
+                    } else {
+                        addMessage(data.message || 'No matching diagnostic codes found. Please provide more specific details about your vehicle problem.');
+                    }
+                } else {
+                    addMessage(`❌ ${data.error || 'An error occurred during diagnosis.'}`);
+                }
+            } catch (error) {
+                removeLoading();
+                addMessage(`❌ Connection error: ${error.message}`);
+            }
+
+            sendButton.disabled = false;
+        }
+
+        function sendExample(exampleText) {
+            userInput.value = exampleText;
+            sendMessage();
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Welcome message
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                addMessage('👋 Welcome to Vehicle Diagnostics AI! Describe your vehicle problem in plain English, and I\'ll help identify potential OBD diagnostic codes and causes.');
+            }, 500);
+        });
+    </script>
+</body>
 </html>
