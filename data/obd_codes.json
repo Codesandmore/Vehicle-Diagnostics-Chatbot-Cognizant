@@ -1,0 +1,993 @@
+[
+  {
+    "id": "P0300",
+    "description": "Random/Multiple Cylinder Misfire Detected",
+    "common_causes": [
+      "vacuum leaks",
+      "faulty spark plugs",
+      "ignition coils",
+      "fuel delivery issues",
+      "EGR valve leaks"
+    ],
+    "priority": "High",
+    "confirmation": "vacuum leaks"
+  },
+  {
+    "id": "P0141",
+    "description": "O2 Sensor Heater Circuit Malfunction",
+    "common_causes": [
+      "faulty O2 sensor",
+      "heater circuit issue",
+      "electrical connection"
+    ],
+    "priority": "Low",
+    "confirmation": "heater circuit issue"
+  },
+  {
+    "id": "P0446",
+    "description": "Evaporative Emission Control System Vent Control Circuit Malfunction",
+    "common_causes": [
+      "faulty vent solenoid",
+      "EVAP clog",
+      "dirty canister"
+    ],
+    "priority": "Medium",
+    "confirmation": "faulty vent solenoid"
+  },
+  {
+    "id": "P0313",
+    "description": "Misfire Detected With Low Fuel",
+    "common_causes": [
+      "low fuel level",
+      "fuel quality",
+      "misfire exacerbated by low fuel"
+    ],
+    "priority": "High",
+    "confirmation": "low fuel level"
+  },
+  {
+    "id": "P0314",
+    "description": "Single Cylinder Misfire (Cylinder Not Specified)",
+    "common_causes": [
+      "ignition system failure",
+      "fuel system issue",
+      "compression issue"
+    ],
+    "priority": "High",
+    "confirmation": "ignition system failure"
+  },
+  {
+    "id": "P0442",
+    "description": "Evaporative Emission System Leak Detected (small leak)",
+    "common_causes": [
+      "loose gas cap",
+      "cracked EVAP hose",
+      "leaky canister",
+      "faulty purge valve"
+    ],
+    "priority": "Low",
+    "confirmation": "cracked EVAP hose"
+  },
+  {
+    "id": "P0455",
+    "description": "Evaporative Emission System Leak Detected (large leak)",
+    "common_causes": [
+      "loose/missing gas cap",
+      "EVAP hose leak",
+      "damaged canister"
+    ],
+    "priority": "Low",
+    "confirmation": "loose/missing gas cap"
+  },
+  {
+    "id": "P0128",
+    "description": "Coolant Temperature Below Thermostat Regulating Temperature",
+    "common_causes": [
+      "stuck-open thermostat",
+      "coolant flow issue"
+    ],
+    "priority": "Low",
+    "confirmation": "stuck-open thermostat"
+  },
+  {
+    "id": "P0325",
+    "description": "Knock Sensor 1 Circuit (Bank 1 or Single Sensor) Malfunction",
+    "common_causes": [
+      "faulty knock sensor",
+      "wiring issue",
+      "engine knock"
+    ],
+    "priority": "Medium",
+    "confirmation": "faulty knock sensor"
+  },
+  {
+    "id": "P0505",
+    "description": "Idle Air Control System Malfunction",
+    "common_causes": [
+      "faulty IAC valve",
+      "carbon buildup",
+      "vacuum leak"
+    ],
+    "priority": "Medium",
+    "confirmation": "faulty IAC valve"
+  },
+  {
+    "id": "P0600",
+    "description": "Serial Communication Link Malfunction",
+    "common_causes": [
+      "faulty wiring",
+      "module communication failure"
+    ],
+    "priority": "High",
+    "confirmation": "faulty wiring"
+  },
+  {
+    "id": "P0601",
+    "description": "Internal Control Module Memory Check Sum Error",
+    "common_causes": [
+      "ECM memory fault",
+      "software corruption"
+    ],
+    "priority": "High",
+    "confirmation": "ECM memory fault"
+  },
+  {
+    "id": "P0602",
+    "description": "Control Module Programming Error",
+    "common_causes": [
+      "faulty ECM programming",
+      "corrupted software"
+    ],
+    "priority": "High",
+    "confirmation": "faulty ECM programming"
+  },
+  {
+    "id": "P0700",
+    "description": "Transmission Control System Malfunction",
+    "common_causes": [
+      "transmission module fault",
+      "wiring error"
+    ],
+    "priority": "High",
+    "confirmation": "transmission module fault"
+  },
+  {
+    "id": "P0316",
+    "description": "Misfire Detected On Startup (First 1000 Revolutions)",
+    "common_causes": [
+      "cold start issues",
+      "ignition/fuel system fault"
+    ],
+    "priority": "High",
+    "confirmation": "cold start issues"
+  },
+  {
+    "id": "P0317",
+    "description": "Rough Road Hardware Not Present",
+    "common_causes": [
+      "vehicle missing sensor hardware",
+      "ECM misconfiguration"
+    ],
+    "priority": "Low",
+    "confirmation": "vehicle missing sensor hardware"
+  },
+  {
+    "id": "P0440",
+    "description": "Evaporative Emission System Malfunction (large leak)",
+    "common_causes": [
+      "loose gas cap",
+      "faulty purge valve",
+      "EVAP hose leak",
+      "bad charcoal canister"
+    ],
+    "priority": "Medium",
+    "confirmation": "bad charcoal canister"
+  },
+  {
+    "id": "P0335",
+    "description": "Crankshaft Position Sensor A Circuit Malfunction",
+    "common_causes": [
+      "faulty CPS",
+      "wiring/connector issue"
+    ],
+    "priority": "High",
+    "confirmation": "wiring/connector issue"
+  },
+  {
+    "id": "P0340",
+    "description": "Camshaft Position Sensor Circuit Malfunction",
+    "common_causes": [
+      "faulty camshaft sensor",
+      "wiring issue"
+    ],
+    "priority": "High",
+    "confirmation": "faulty camshaft sensor"
+  },
+  {
+    "id": "P0200",
+    "description": "Injector Circuit/Open",
+    "common_causes": [
+      "faulty fuel injector",
+      "wiring issue"
+    ],
+    "priority": "High",
+    "confirmation": "faulty fuel injector"
+  },
+  {
+    "id": "P0605",
+    "description": "Read Only Memory (ROM) Error in Control Module",
+    "common_causes": [
+      "ECM ROM failure"
+    ],
+    "priority": "High",
+    "confirmation": "ECM ROM failure"
+  },
+  {
+    "id": "P0135",
+    "description": "O2 Sensor Heater Circuit Malfunction (Bank 1 Sensor 1)",
+    "common_causes": [
+      "faulty O2 sensor heater",
+      "wiring issue"
+    ],
+    "priority": "Low",
+    "confirmation": "faulty O2 sensor heater"
+  },
+  {
+    "id": "P0315",
+    "description": "Crankshaft Position System Variation Not Learned",
+    "common_causes": [
+      "recent engine repair requiring relearn",
+      "faulty CPS"
+    ],
+    "priority": "Medium",
+    "confirmation": "recent engine repair requiring relearn"
+  },
+  {
+    "id": "P0100",
+    "description": "Mass or Volume Air Flow (MAF) Circuit Malfunction",
+    "common_causes": [
+      "dirty or contaminated mass air flow sensor",
+      "failed MAF sensor",
+      "intake air leaks",
+      "MAF sensor wiring harness problem",
+      "oiled air filter contamination (obd-codes note)"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "dirty or contaminated mass air flow sensor"
+  },
+  {
+    "id": "P0101",
+    "description": "MAF Circuit Range/Performance Problem",
+    "common_causes": [
+      "contaminated MAF sensor",
+      "vacuum leaks downstream of MAF",
+      "air filter blockage",
+      "wiring issues to MAF"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "contaminated MAF sensor"
+  },
+  {
+    "id": "P0103",
+    "description": "MAF Circuit High Input",
+    "common_causes": [
+      "MAF sensor short to voltage",
+      "electronics fault in MAF"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "MAF sensor short to voltage"
+  },
+  {
+    "id": "P0110",
+    "description": "Intake Air Temperature Circuit Malfunction",
+    "common_causes": [
+      "faulty IAT sensor",
+      "wiring open/short",
+      "sensor contamination"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "sensor contamination"
+  },
+  {
+    "id": "P0115",
+    "description": "Engine Coolant Temperature Sensor Circuit Malfunction",
+    "common_causes": [
+      "faulty coolant temp sensor",
+      "poor electrical connection",
+      "shorted sensor circuit"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty coolant temp sensor"
+  },
+  {
+    "id": "P0172",
+    "description": "System Too Rich (Bank 1)",
+    "common_causes": [
+      "fuel pressure too high",
+      "stuck fuel injector",
+      "bad fuel pressure regulator"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "fuel pressure too high"
+  },
+  {
+    "id": "P0705",
+    "description": "Transmission Range Sensor Circuit Malfunction (PRNDL Input)",
+    "common_causes": [
+      "faulty range sensor",
+      "wiring open/short",
+      "shift interlock problem"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty range sensor"
+  },
+  {
+    "id": "P0136",
+    "description": "O2 Sensor Circuit Low Voltage (Bank 1 Sensor 2)",
+    "common_causes": [
+      "faulty O2 sensor",
+      "wiring issue",
+      "exhaust leak causing sensor error"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "exhaust leak causing sensor error"
+  },
+  {
+    "id": "P0155",
+    "description": "O2 Sensor Heater Circuit Malfunction (Bank 2 Sensor 1)",
+    "common_causes": [
+      "heater circuit open",
+      "failed O2 sensor heater",
+      "bad connector"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "heater circuit open"
+  },
+  {
+    "id": "P0401",
+    "description": "Exhaust Gas Recirculation (EGR) Flow Insufficient Detected",
+    "common_causes": [
+      "clogged EGR passages",
+      "stuck EGR valve",
+      "EGR vacuum supply leak"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "clogged EGR passages"
+  },
+  {
+    "id": "P0421",
+    "description": "Warm Up Catalyst Efficiency Below Threshold (Bank 1)",
+    "common_causes": [
+      "partial catalytic converter failure",
+      "oxygen sensor slow response",
+      "exhaust restriction"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "partial catalytic converter failure"
+  },
+  {
+    "id": "P0456",
+    "description": "Evaporative Emission System Leak Detected (very small leak)",
+    "common_causes": [
+      "degraded rubber EVAP hoses",
+      "porous charcoal canister seal",
+      "loose filler neck seal"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "degraded rubber EVAP hoses"
+  },
+  {
+    "id": "P0506",
+    "description": "Idle Air Control System RPM Lower Than Expected",
+    "common_causes": [
+      "dirty throttle body",
+      "sticking IAC valve",
+      "vacuum leak causing low RPM"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "dirty throttle body"
+  },
+  {
+    "id": "P0606",
+    "description": "PCM/ECM Processor Fault",
+    "common_causes": [
+      "failed PCM processor",
+      "internal hardware fault"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed PCM processor"
+  },
+  {
+    "id": "P0620",
+    "description": "Generator Control Circuit Malfunction",
+    "common_causes": [
+      "faulty alternator control circuit",
+      "voltage regulator failure"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty alternator control circuit"
+  },
+  {
+    "id": "P0706",
+    "description": "Transmission Range Sensor Circuit Performance",
+    "common_causes": [
+      "faulty transmission range sensor",
+      "wiring intermittent"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty transmission range sensor"
+  },
+  {
+    "id": "P0715",
+    "description": "Input/Turbine Speed Sensor Circuit Malfunction",
+    "common_causes": [
+      "faulty speed sensor",
+      "wiring open/short",
+      "transmission mechanical issue"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty speed sensor"
+  },
+  {
+    "id": "P0720",
+    "description": "Output Speed Sensor Circuit Malfunction",
+    "common_causes": [
+      "failed speed sensor",
+      "wiring harness damage",
+      "sensor reluctor ring damage"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed speed sensor"
+  },
+  {
+    "id": "P0730",
+    "description": "Incorrect Gear Ratio",
+    "common_causes": [
+      "mechanical transmission fault",
+      "slipping clutch (manual)/torque converter issue (auto)",
+      "incorrect final drive"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "mechanical transmission fault"
+  },
+  {
+    "id": "P0740",
+    "description": "Torque Converter Clutch Circuit Malfunction",
+    "common_causes": [
+      "stuck TCC solenoid",
+      "wiring issue to TCC",
+      "hydraulic control problem"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "stuck TCC solenoid"
+  },
+  {
+    "id": "P0750",
+    "description": "Shift Solenoid A Malfunction",
+    "common_causes": [
+      "bad shift solenoid",
+      "wiring/connector problem",
+      "TCM issue"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad shift solenoid"
+  },
+  {
+    "id": "P0760",
+    "description": "Shift Solenoid C Malfunction",
+    "common_causes": [
+      "failed shift solenoid C",
+      "hydraulic control failure",
+      "wiring fault"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed shift solenoid C"
+  },
+  {
+    "id": "P0770",
+    "description": "Shift Solenoid E Malfunction",
+    "common_causes": [
+      "defective solenoid E",
+      "electrical short in solenoid circuit"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "defective solenoid E"
+  },
+  {
+    "id": "P0785",
+    "description": "Shift/Timing Solenoid Malfunction (6th gear)",
+    "common_causes": [
+      "wiring to solenoid",
+      "failed solenoid",
+      "TCM command error"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "wiring to solenoid"
+  },
+  {
+    "id": "P0180",
+    "description": "Fuel Temperature Sensor A Circuit Malfunction",
+    "common_causes": [
+      "faulty fuel temp sensor"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty fuel temp sensor"
+  },
+  {
+    "id": "P0184",
+    "description": "Fuel Temperature Sensor Intermittent",
+    "common_causes": [
+      "faulty sensor intermittent"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty sensor intermittent"
+  },
+  {
+    "id": "P0190",
+    "description": "Fuel Rail Pressure Sensor A Circuit",
+    "common_causes": [
+      "faulty rail sensor"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty rail sensor"
+  },
+  {
+    "id": "P0203",
+    "description": "Injector Circuit/Open - Cylinder 3",
+    "common_causes": [
+      "faulty injector cylinder 3"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty injector cylinder 3"
+  },
+  {
+    "id": "P0204",
+    "description": "Injector Circuit/Open - Cylinder 4",
+    "common_causes": [
+      "faulty injector cylinder 4"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty injector cylinder 4"
+  },
+  {
+    "id": "P0219",
+    "description": "Engine Overspeed Condition",
+    "common_causes": [
+      "mechanical seizure or control failure"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "mechanical seizure or control failure"
+  },
+  {
+    "id": "P0220",
+    "description": "Throttle/Pedal Position Sensor/Switch A Circuit Malfunction",
+    "common_causes": [
+      "faulty TPS sensor"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty TPS sensor"
+  },
+  {
+    "id": "P0230",
+    "description": "Fuel Pump Primary Circuit Malfunction",
+    "common_causes": [
+      "failed fuel pump relay or wiring"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed fuel pump relay or wiring"
+  },
+  {
+    "id": "P0320",
+    "description": "Ignition/Distributor Engine Speed Input Circuit Malfunction",
+    "common_causes": [
+      "faulty crank/cam speed input"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty crank/cam speed input"
+  },
+  {
+    "id": "P0330",
+    "description": "Knock Sensor A Circuit Malfunction (Bank 1)",
+    "common_causes": [
+      "knock sensor wiring/failed sensor"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "knock sensor wiring/failed sensor"
+  },
+  {
+    "id": "P0345",
+    "description": "Camshaft Position Sensor Circuit Malfunction (Bank 2)",
+    "common_causes": [
+      "cam sensor failure bank2"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "cam sensor failure bank2"
+  },
+  {
+    "id": "P0365",
+    "description": "Camshaft Position Sensor Circuit Malfunction (Bank 4)",
+    "common_causes": [
+      "cam sensor bank4 fault"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "cam sensor bank4 fault"
+  },
+  {
+    "id": "P0400",
+    "description": "EGR Flow Malfunction",
+    "common_causes": [
+      "stuck EGR valve or clogged passages"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "stuck EGR valve or clogged passages"
+  },
+  {
+    "id": "P0410",
+    "description": "Secondary Air Injection System Malfunction",
+    "common_causes": [
+      "failed secondary air pump"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed secondary air pump"
+  },
+  {
+    "id": "P0441",
+    "description": "Evaporative Emission Control System Incorrect Purge Flow",
+    "common_causes": [
+      "stuck purge valve"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "stuck purge valve"
+  },
+  {
+    "id": "P0450",
+    "description": "Evaporative Emission Control System Pressure Sensor Malfunction",
+    "common_causes": [
+      "failed EVAP pressure sensor"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed EVAP pressure sensor"
+  },
+  {
+    "id": "P0460",
+    "description": "Fuel Level Sensor Circuit Malfunction",
+    "common_causes": [
+      "faulty fuel level sensor"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty fuel level sensor"
+  },
+  {
+    "id": "P0471",
+    "description": "Exhaust Pressure Sensor Circuit Malfunction",
+    "common_causes": [
+      "exhaust sensor failure"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "exhaust sensor failure"
+  },
+  {
+    "id": "P0500",
+    "description": "Vehicle Speed Sensor Malfunction",
+    "common_causes": [
+      "bad VSS sensor or wiring"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad VSS sensor or wiring"
+  },
+  {
+    "id": "P0610",
+    "description": "Starter Relay Circuit Malfunction",
+    "common_causes": [
+      "starter relay wiring or relay"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "starter relay wiring or relay"
+  },
+  {
+    "id": "P0703",
+    "description": "Transmission Control Module Request Circuit Fault",
+    "common_causes": [
+      "TCM request fault"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "TCM request fault"
+  },
+  {
+    "id": "P0710",
+    "description": "Input/Turbine Speed Sensor Circuit No Signal",
+    "common_causes": [
+      "wiring open or sensor failed"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "wiring open or sensor failed"
+  },
+  {
+    "id": "P0725",
+    "description": "Engine Speed Input Circuit Malfunction",
+    "common_causes": [
+      "speed sensor wiring"
+    ],
+    "priority": "Medium",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "speed sensor wiring"
+  },
+  {
+    "id": "P0731",
+    "description": "Incorrect Gear Ratio 1",
+    "common_causes": [
+      "transmission mechanical fault"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "transmission mechanical fault"
+  },
+  {
+    "id": "P0755",
+    "description": "Shift Solenoid B Malfunction",
+    "common_causes": [
+      "failed shift solenoid B"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "failed shift solenoid B"
+  },
+  {
+    "id": "P0745",
+    "description": "TCC System Stuck Off",
+    "common_causes": [
+      "torque converter clutch stuck off"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "torque converter clutch stuck off"
+  },
+  {
+    "id": "P037",
+    "description": "Cylinder 7 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 7",
+      "ignition coil cylinder 7"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 7"
+  },
+  {
+    "id": "P038",
+    "description": "Cylinder 8 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 8",
+      "ignition coil cylinder 8"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 8"
+  },
+  {
+    "id": "P039",
+    "description": "Cylinder 9 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 9",
+      "ignition coil cylinder 9"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 9"
+  },
+  {
+    "id": "P0310",
+    "description": "Cylinder 10 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 10",
+      "ignition coil cylinder 10"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 10"
+  },
+  {
+    "id": "P0311",
+    "description": "Cylinder 11 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 11",
+      "ignition coil cylinder 11"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 11"
+  },
+  {
+    "id": "P0312",
+    "description": "Cylinder 12 Misfire Detected",
+    "common_causes": [
+      "bad spark plug cylinder 12",
+      "ignition coil cylinder 12"
+    ],
+    "priority": "High",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "bad spark plug cylinder 12"
+  },
+  {
+    "id": "P0138",
+    "description": "O2 Sensor Circuit High Voltage (Bank 1 Sensor 2)",
+    "common_causes": [
+      "O2 sensor high voltage"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "O2 sensor high voltage"
+  },
+  {
+    "id": "P0150",
+    "description": "O2 Sensor Circuit Malfunction (Bank 2 Sensor 1)",
+    "common_causes": [
+      "faulty O2 sensor bank2 sensor1"
+    ],
+    "priority": "Low",
+    "source": [
+      "obd-codes.com"
+    ],
+    "confirmation": "faulty O2 sensor bank2 sensor1"
+  }
+]
