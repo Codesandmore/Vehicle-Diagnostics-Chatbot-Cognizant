@@ -15,6 +15,8 @@ from fuzzywuzzy import fuzz, process
 import numpy as np
 import os
 
+nltk.download('punkt_tab')
+
 # Download required NLTK data
 try:
     nltk.data.find('tokenizers/punkt')

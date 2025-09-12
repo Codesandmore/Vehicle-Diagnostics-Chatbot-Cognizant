@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vehicle Diagnostics Chatbot - Unified Interface</title>
+    <title>Vehicle Diagnostics Chatbot</title>
     <style>
       * {
         margin: 0;
@@ -129,72 +129,6 @@
         color: #333;
         border: 1px solid #e1e5e9;
         border-bottom-left-radius: 4px;
-      }
-
-      .diagnostic-result {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-      }
-
-      .code-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-      }
-
-      .code-id {
-        font-family: "Courier New", monospace;
-        font-weight: bold;
-        font-size: 1.1em;
-        color: #dc3545;
-      }
-
-      .priority {
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.8em;
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-
-      .priority.high {
-        background-color: #dc3545;
-        color: white;
-      }
-
-      .priority.medium {
-        background-color: #ffc107;
-        color: #212529;
-      }
-
-      .priority.low {
-        background-color: #28a745;
-        color: white;
-      }
-
-      .confidence {
-        color: #6c757d;
-        font-size: 0.9em;
-        margin-left: 10px;
-      }
-
-      .description {
-        font-weight: bold;
-        margin-bottom: 8px;
-        color: #212529;
-      }
-
-      .causes-list {
-        margin: 5px 0 0 20px;
-        color: #495057;
-      }
-
-      .causes-list li {
-        margin-bottom: 3px;
       }
 
       .loading {
@@ -337,14 +271,33 @@
         display: none;
       }
 
-      .analysis-info {
-        margin-top: 10px;
-        padding: 8px 12px;
-        background: #e3f2fd;
-        border-left: 4px solid #2196f3;
-        border-radius: 4px;
-        font-size: 0.9em;
-        color: #1565c0;
+      /* Markdown formatting for bot responses */
+      .message.bot .message-content h1,
+      .message.bot .message-content h2,
+      .message.bot .message-content h3 {
+        margin: 10px 0 5px 0;
+        color: #333;
+      }
+
+      .message.bot .message-content ul,
+      .message.bot .message-content ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+
+      .message.bot .message-content li {
+        margin: 5px 0;
+      }
+
+      .message.bot .message-content strong {
+        color: #007bff;
+      }
+
+      .message.bot .message-content code {
+        background: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
       }
 
       @media (max-width: 768px) {
@@ -391,7 +344,7 @@
     <div class="main-container">
       <div class="chat-container">
         <div class="chat-header">
-          🤖 Unified Vehicle Assistant - Ask anything or describe your vehicle
+          🤖 AI Assistant with Diagnostic Analysis - Describe your vehicle
           problems
         </div>
 
@@ -528,7 +481,15 @@
         messageContent.className = "message-content";
 
         if (typeof content === "string") {
-          messageContent.innerHTML = content;
+          // Convert markdown-like formatting to HTML for better display
+          let formattedContent = content
+            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Bold
+            .replace(/\*(.*?)\*/g, "<em>$1</em>") // Italic
+            .replace(/`(.*?)`/g, "<code>$1</code>") // Code
+            .replace(/\n\n/g, "<br><br>") // Paragraphs
+            .replace(/\n/g, "<br>"); // Line breaks
+
+          messageContent.innerHTML = formattedContent;
         } else {
           messageContent.appendChild(content);
         }
@@ -538,46 +499,9 @@
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
-      function createDiagnosticResult(match) {
-        const result = document.createElement("div");
-        result.className = "diagnostic-result";
-
-        const priorityClass = match.priority.toLowerCase();
-
-        result.innerHTML = `
-                <div class="code-header">
-                    <span class="code-id">${match.code}</span>
-                    <div>
-                        <span class="priority ${priorityClass}">${
-          match.priority
-        }</span>
-                        <span class="confidence">Confidence: ${
-                          match.confidence
-                        }</span>
-                    </div>
-                </div>
-                <div class="description">${match.description}</div>
-                <div>
-                    <strong>Common Causes:</strong>
-                    <ul class="causes-list">
-                        ${match.common_causes
-                          .map((cause) => `<li>${cause}</li>`)
-                          .join("")}
-                    </ul>
-                </div>
-                ${
-                  match.confirmation
-                    ? `<div style="margin-top: 8px;"><strong>Additional Info:</strong> ${match.confirmation}</div>`
-                    : ""
-                }
-            `;
-
-        return result;
-      }
-
       function showLoading() {
         addMessage(
-          `<div class="loading">Analyzing your request<span class="loading-dots"></span></div>`
+          `<div class="loading">Analyzing your request and generating response<span class="loading-dots"></span></div>`
         );
       }
 
@@ -586,82 +510,6 @@
         loadingMessages.forEach((msg) => {
           msg.closest(".message").remove();
         });
-      }
-
-      // Smart detection: determines whether to use NLP diagnosis or AI chat
-      function shouldUseNLP(message, hasImage) {
-        // Always use AI chat if there's an image
-        if (hasImage) return false;
-
-        // Check for diagnostic keywords that suggest specific vehicle problems
-        const diagnosticKeywords = [
-          "engine",
-          "misfire",
-          "idle",
-          "rough",
-          "stall",
-          "knock",
-          "ping",
-          "oxygen",
-          "sensor",
-          "o2",
-          "check engine",
-          "cel",
-          "code",
-          "dtc",
-          "transmission",
-          "shift",
-          "slip",
-          "gear",
-          "clutch",
-          "brake",
-          "abs",
-          "pad",
-          "rotor",
-          "squeal",
-          "suspension",
-          "shock",
-          "strut",
-          "bounce",
-          "exhaust",
-          "smoke",
-          "emission",
-          "catalytic",
-          "fuel",
-          "gas",
-          "mpg",
-          "leak",
-          "vapor",
-          "cap",
-          "coolant",
-          "overheat",
-          "temperature",
-          "thermostat",
-          "oil",
-          "pressure",
-          "leak",
-          "consumption",
-          "battery",
-          "alternator",
-          "starter",
-          "electrical",
-          "belt",
-          "timing",
-          "serpentine",
-          "squeak",
-          "vibration",
-          "shake",
-          "noise",
-          "rattle",
-        ];
-
-        const messageLower = message.toLowerCase();
-        const hasKeywords = diagnosticKeywords.some((keyword) =>
-          messageLower.includes(keyword)
-        );
-
-        // Use NLP for diagnostic-specific queries
-        return hasKeywords && message.length > 10; // Reasonable length for diagnostics
       }
 
       async function sendMessage() {
@@ -686,79 +534,7 @@
         sendButton.disabled = true;
 
         try {
-          let response;
-          const useNLP = shouldUseNLP(message, selectedImage);
-
-          if (useNLP && !selectedImage) {
-            // Always use the combined NLP + Gemini AI approach
-            const formData = new FormData();
-            formData.append("message", message);
-            if (selectedImage) {
-              formData.append("image", selectedImage);
-            }
-
-            response = await fetch("/send_message", {
-              method: "POST",
-              body: formData,
-            });
-
-            const data = await response.json();
-            removeLoading();
-
-            if (data.success) {
-              if (data.matches && data.matches.length > 0) {
-                // Create container for all results
-                const resultsContainer = document.createElement("div");
-
-                // Add summary with diagnostic icon
-                const summary = document.createElement("div");
-                summary.innerHTML = `<strong>🔍 Diagnostic Results: ${data.message}</strong>`;
-                resultsContainer.appendChild(summary);
-
-                // Add each diagnostic result
-                data.matches.forEach((match) => {
-                  resultsContainer.appendChild(createDiagnosticResult(match));
-                });
-
-                // Add analysis info if available
-                if (
-                  data.analysis &&
-                  data.analysis.detected_symptoms.length > 0
-                ) {
-                  const analysisInfo = document.createElement("div");
-                  analysisInfo.className = "analysis-info";
-                  analysisInfo.style.marginTop = "10px";
-                  analysisInfo.innerHTML = `
-                                    <em>Detected symptoms: ${data.analysis.detected_symptoms.join(
-                                      ", "
-                                    )}</em>
-                                `;
-                  resultsContainer.appendChild(analysisInfo);
-                }
-
-                addMessage(resultsContainer);
-              } else {
-                // If NLP found nothing, fall back to AI chat
-                await sendToAIChat(message, false);
-              }
-            } else {
-              // If NLP failed, fall back to AI chat
-              await sendToAIChat(message, false);
-            }
-          } else {
-            // Use AI Chat for general questions, advice, or images
-            await sendToAIChat(message, true);
-          }
-        } catch (error) {
-          removeLoading();
-          addMessage(`❌ Connection error: ${error.message}`);
-        }
-
-        sendButton.disabled = false;
-      }
-
-      async function sendToAIChat(message, showChatIcon) {
-        try {
+          // Send to combined NLP + Gemini AI endpoint
           const formData = new FormData();
           formData.append("message", message);
           if (selectedImage) {
@@ -773,12 +549,8 @@
           const data = await response.json();
           removeLoading();
 
-          const chatIcon = showChatIcon ? "🤖 " : "";
-          addMessage(
-            `${chatIcon}${
-              data.reply || "Sorry, I could not process your request."
-            }`
-          );
+          // Display the Gemini AI response (which includes NLP analysis)
+          addMessage(data.reply || "Sorry, I could not process your request.");
 
           // Clear image after sending
           if (selectedImage) {
@@ -786,8 +558,10 @@
           }
         } catch (error) {
           removeLoading();
-          addMessage(`❌ Error: ${error.message}`);
+          addMessage(`❌ Connection error: ${error.message}`);
         }
+
+        sendButton.disabled = false;
       }
 
       function sendExample(exampleText) {
@@ -808,7 +582,7 @@
       window.addEventListener("load", () => {
         setTimeout(() => {
           addMessage(
-            "👋 Welcome to the unified Vehicle Diagnostics Assistant! I can help with both specific diagnostic problems and general vehicle questions. Just type your message or upload an image, and I'll automatically route it to the best system for you."
+            "👋 Welcome! I'm your Vehicle Diagnostics AI Assistant. I can help with vehicle problems, maintenance questions, and diagnostic advice. \n\nI use both **NLP diagnostic analysis** and **AI intelligence** to provide comprehensive answers. Just describe your vehicle issue or ask any automotive question!"
           );
         }, 500);
       });
