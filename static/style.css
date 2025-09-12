@@ -156,3 +156,33 @@ body {
   font-style: italic;
   color: #666;
 }
+
+/* Markdown formatting styles */
+.bot-message strong {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.bot-message em {
+  font-style: italic;
+}
+
+.bot-message ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.bot-message li {
+  margin: 5px 0;
+  line-height: 1.4;
+}
+
+.bot-message br {
+  line-height: 1.6;
+}
+
+/* Better spacing for formatted content */
+.bot-message p {
+  margin: 8px 0;
+  line-height: 1.5;
+}

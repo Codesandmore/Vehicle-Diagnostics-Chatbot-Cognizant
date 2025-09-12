@@ -77,9 +77,80 @@ document.addEventListener("DOMContentLoaded", function () {
       messageDiv.className += " typing";
       messageDiv.id = "typing-indicator";
     }
-    messageDiv.textContent = text;
+
+    // Convert markdown-style formatting to HTML for bot messages
+    if (sender === "bot" && !isTyping) {
+      messageDiv.innerHTML = formatMarkdown(text);
+    } else {
+      messageDiv.textContent = text;
+    }
+
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  // Convert markdown-style formatting to HTML
+  function formatMarkdown(text) {
+    let formatted = text;
+
+    // First, escape any existing HTML to prevent injection
+    formatted = formatted.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Convert **bold** to <strong>
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    // Convert *italic* (but not if it's part of **bold**)
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>");
+
+    // Convert line breaks to <br>
+    formatted = formatted.replace(/\n/g, "<br>");
+
+    // Handle bullet points with nested structure
+    const lines = formatted.split("<br>");
+    let inList = false;
+    let processedLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+
+      // Check if line starts with bullet point
+      if (line.match(/^\*\s+(.+)/)) {
+        if (!inList) {
+          processedLines.push("<ul>");
+          inList = true;
+        }
+        // Extract content after the asterisk
+        const content = line.replace(/^\*\s+/, "");
+        processedLines.push(`<li>${content}</li>`);
+      } else {
+        // If we were in a list and this line doesn't start with *, close the list
+        if (inList && line !== "") {
+          processedLines.push("</ul>");
+          inList = false;
+        }
+        if (line !== "") {
+          processedLines.push(line);
+        }
+      }
+    }
+
+    // Close list if we end while still in one
+    if (inList) {
+      processedLines.push("</ul>");
+    }
+
+    formatted = processedLines.join("<br>");
+
+    // Clean up extra <br> tags around lists
+    formatted = formatted.replace(/<br><ul>/g, "<ul>");
+    formatted = formatted.replace(/<\/ul><br>/g, "</ul>");
+    formatted = formatted.replace(/<br><li>/g, "<li>");
+    formatted = formatted.replace(/<\/li><br>/g, "</li>");
+
+    // Remove empty <br> tags
+    formatted = formatted.replace(/(<br>){2,}/g, "<br><br>");
+
+    return formatted;
   }
 
   // Add message with image to chat box

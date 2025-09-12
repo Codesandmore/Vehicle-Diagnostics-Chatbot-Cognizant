@@ -312,7 +312,7 @@ class DiagnosticProcessor:
 def main():
     """Test the diagnostic processor"""
     # Initialize processor
-    obd_codes_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'obd_codes.json')
+    obd_codes_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'newdata.json')
     processor = DiagnosticProcessor(obd_codes_path)
     
     # Test with sample inputs
