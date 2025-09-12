@@ -50,6 +50,34 @@
             opacity: 0.9;
         }
 
+        /* Tab System */
+        .mode-tabs {
+            display: flex;
+            background: #f0f0f0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+        }
+
+        .mode-tab.active {
+            background: white;
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+
+        .mode-tab:hover:not(.active) {
+            background: #e8e8e8;
+        }
+
         .chat-box {
             flex: 1;
             padding: 20px;
@@ -172,8 +200,12 @@
             padding: 20px;
             background: white;
             border-top: 1px solid #e0e0e0;
+        }
+
+        .input-section {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         #user-input {
@@ -188,6 +220,69 @@
         #user-input:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Image Upload Styles */
+        #image-input {
+            display: none;
+        }
+
+        #image-button {
+            padding: 12px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        #image-button:hover {
+            background: #e0e0e0;
+        }
+
+        #image-button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .image-preview {
+            display: none;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        #preview-img {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        #remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #send-button {
@@ -272,17 +367,36 @@
             background: #667eea;
             color: white;
         }
+
+        /* Mode-specific visibility */
+        .nlp-mode .llm-only {
+            display: none !important;
+        }
+
+        .llm-mode .nlp-only {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
             <h1>🚗 Vehicle Diagnostics AI</h1>
-            <p>Describe your vehicle problem and get instant OBD code diagnostics</p>
+            <p>AI-powered vehicle diagnostics with NLP analysis and visual inspection</p>
+        </div>
+        
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="nlp" onclick="switchMode('nlp')">
+                🔍 NLP Diagnosis
+            </button>
+            <button class="mode-tab" data-mode="llm" onclick="switchMode('llm')">
+                🤖 AI Chat & Images
+            </button>
         </div>
         
         <div class="chat-box" id="chat-box">
-            <div class="examples">
+            <!-- NLP Mode Examples -->
+            <div class="examples nlp-only">
                 <h3>Try asking about these common issues:</h3>
                 <div class="example-buttons">
                     <button class="example-btn" onclick="sendExample('My car has a rough idle and engine misfire')">Engine misfire</button>
@@ -292,11 +406,33 @@
                     <button class="example-btn" onclick="sendExample('Hearing knocking sounds from engine')">Engine knock</button>
                 </div>
             </div>
+
+            <!-- LLM Mode Examples -->
+            <div class="examples llm-only" style="display: none;">
+                <h3>AI Chat Mode - Ask anything or upload vehicle images:</h3>
+                <div class="example-buttons">
+                    <button class="example-btn" onclick="sendExample('What should I check if my car will not start?')">Won't start</button>
+                    <button class="example-btn" onclick="sendExample('How do I maintain my vehicle?')">Maintenance tips</button>
+                    <button class="example-btn" onclick="sendExample('What does this warning light mean?')">Warning lights</button>
+                    <button class="example-btn" onclick="sendExample('My car is making strange noises')">Strange noises</button>
+                    <button class="example-btn" onclick="sendExample('Upload an image of your engine or dashboard')">Image analysis</button>
+                </div>
+            </div>
         </div>
         
         <div class="chat-input">
-            <input type="text" id="user-input" placeholder="Describe your vehicle problem (e.g., 'engine misfire', 'check engine light', 'rough idle')..." />
-            <button id="send-button">Send</button>
+            <div class="input-section">
+                <input type="text" id="user-input" placeholder="Describe your vehicle problem..." />
+                <input type="file" id="image-input" accept="image/*" class="llm-only" />
+                <button id="image-button" type="button" title="Upload Image" class="llm-only">
+                    📷
+                </button>
+                <button id="send-button">Send</button>
+            </div>
+            <div id="image-preview" class="image-preview">
+                <img id="preview-img" src="" alt="Preview" />
+                <button id="remove-image" type="button">✕</button>
+            </div>
         </div>
     </div>
 
@@ -304,6 +440,92 @@
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
+        const imageInput = document.getElementById('image-input');
+        const imageButton = document.getElementById('image-button');
+        const imagePreview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+        const removeImageBtn = document.getElementById('remove-image');
+        
+        let currentMode = 'nlp';
+        let selectedImage = null;
+
+        // Mode switching
+        function switchMode(mode) {
+            currentMode = mode;
+            const container = document.querySelector('.chat-container');
+            const tabs = document.querySelectorAll('.mode-tab');
+            
+            // Update container class
+            container.className = 'chat-container ' + mode + '-mode';
+            
+            // Update active tab
+            tabs.forEach(tab => {
+                if (tab.dataset.mode === mode) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            // Update placeholder text
+            if (mode === 'nlp') {
+                userInput.placeholder = 'Describe your vehicle problem (e.g., "engine misfire", "check engine light")...';
+            } else {
+                userInput.placeholder = 'Ask a question about your vehicle or upload an image...';
+            }
+            
+            // Clear any selected image when switching to NLP mode
+            if (mode === 'nlp') {
+                clearImage();
+            }
+            
+            // Show welcome message for current mode
+            clearChatAndShowWelcome();
+        }
+
+        function clearChatAndShowWelcome() {
+            // Clear chat but keep examples
+            const messages = chatBox.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+            
+            // Show appropriate welcome message
+            setTimeout(() => {
+                if (currentMode === 'nlp') {
+                    addMessage('👋 Welcome to NLP Diagnosis mode! Describe your vehicle problem in plain English, and I\'ll help identify potential OBD diagnostic codes and causes.');
+                } else {
+                    addMessage('👋 Welcome to AI Chat mode! Ask any vehicle-related questions or upload images for visual analysis. I can help with troubleshooting, maintenance tips, and more!');
+                }
+            }, 300);
+        }
+
+        // Image handling
+        imageButton.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedImage = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    imagePreview.classList.add('show');
+                    imageButton.classList.add('active');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        removeImageBtn.addEventListener('click', clearImage);
+
+        function clearImage() {
+            selectedImage = null;
+            imageInput.value = '';
+            imagePreview.classList.remove('show');
+            imageButton.classList.remove('active');
+            previewImg.src = '';
+        }
 
         function addMessage(content, isUser = false) {
             const message = document.createElement('div');
@@ -351,7 +573,10 @@
         }
 
         function showLoading() {
-            addMessage('<div class="loading">Analyzing your vehicle problem<span class="loading-dots"></span></div>');
+            const loadingText = currentMode === 'nlp' ? 
+                'Analyzing your vehicle problem' : 
+                'Processing your request';
+            addMessage(`<div class="loading">${loadingText}<span class="loading-dots"></span></div>`);
         }
 
         function removeLoading() {
@@ -363,10 +588,18 @@
 
         async function sendMessage() {
             const message = userInput.value.trim();
-            if (!message) return;
+            if (!message && !selectedImage) return;
 
             // Add user message
-            addMessage(message, true);
+            let userMessageContent = message;
+            if (selectedImage && currentMode === 'llm') {
+                userMessageContent += selectedImage ? ' [Image attached]' : '';
+            }
+            
+            if (userMessageContent) {
+                addMessage(userMessageContent, true);
+            }
+            
             userInput.value = '';
             
             // Show loading
@@ -374,48 +607,75 @@
             sendButton.disabled = true;
 
             try {
-                const response = await fetch('/diagnose', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ message: message })
-                });
+                let response;
+                
+                if (currentMode === 'nlp') {
+                    // NLP Diagnosis Mode
+                    response = await fetch('/diagnose', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+                    
+                    const data = await response.json();
+                    removeLoading();
 
-                const data = await response.json();
-                removeLoading();
-
-                if (data.success) {
-                    if (data.matches && data.matches.length > 0) {
-                        // Create container for all results
-                        const resultsContainer = document.createElement('div');
-                        
-                        // Add summary
-                        const summary = document.createElement('div');
-                        summary.innerHTML = `<strong>${data.message}</strong>`;
-                        resultsContainer.appendChild(summary);
-                        
-                        // Add each diagnostic result
-                        data.matches.forEach(match => {
-                            resultsContainer.appendChild(createDiagnosticResult(match));
-                        });
-                        
-                        // Add analysis info if available
-                        if (data.analysis && data.analysis.detected_symptoms.length > 0) {
-                            const analysisInfo = document.createElement('div');
-                            analysisInfo.className = 'analysis-info';
-                            analysisInfo.innerHTML = `
-                                <strong>Detected symptoms:</strong> ${data.analysis.detected_symptoms.join(', ')}
-                            `;
-                            resultsContainer.appendChild(analysisInfo);
+                    if (data.success) {
+                        if (data.matches && data.matches.length > 0) {
+                            // Create container for all results
+                            const resultsContainer = document.createElement('div');
+                            
+                            // Add summary
+                            const summary = document.createElement('div');
+                            summary.innerHTML = `<strong>${data.message}</strong>`;
+                            resultsContainer.appendChild(summary);
+                            
+                            // Add each diagnostic result
+                            data.matches.forEach(match => {
+                                resultsContainer.appendChild(createDiagnosticResult(match));
+                            });
+                            
+                            // Add analysis info if available
+                            if (data.analysis && data.analysis.detected_symptoms.length > 0) {
+                                const analysisInfo = document.createElement('div');
+                                analysisInfo.className = 'analysis-info';
+                                analysisInfo.innerHTML = `
+                                    <strong>Detected symptoms:</strong> ${data.analysis.detected_symptoms.join(', ')}
+                                `;
+                                resultsContainer.appendChild(analysisInfo);
+                            }
+                            
+                            addMessage(resultsContainer);
+                        } else {
+                            addMessage(data.message || 'No matching diagnostic codes found. Please provide more specific details about your vehicle problem.');
                         }
-                        
-                        addMessage(resultsContainer);
                     } else {
-                        addMessage(data.message || 'No matching diagnostic codes found. Please provide more specific details about your vehicle problem.');
+                        addMessage(`❌ ${data.error || 'An error occurred during diagnosis.'}`);
                     }
                 } else {
-                    addMessage(`❌ ${data.error || 'An error occurred during diagnosis.'}`);
+                    // LLM Chat Mode
+                    const formData = new FormData();
+                    formData.append('message', message);
+                    if (selectedImage) {
+                        formData.append('image', selectedImage);
+                    }
+                    
+                    response = await fetch('/send_message', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    removeLoading();
+                    
+                    addMessage(data.reply || 'Sorry, I could not process your request.');
+                    
+                    // Clear image after sending
+                    if (selectedImage) {
+                        clearImage();
+                    }
                 }
             } catch (error) {
                 removeLoading();
@@ -438,11 +698,10 @@
             }
         });
 
-        // Welcome message
+        // Initialize
         window.addEventListener('load', () => {
-            setTimeout(() => {
-                addMessage('👋 Welcome to Vehicle Diagnostics AI! Describe your vehicle problem in plain English, and I\'ll help identify potential OBD diagnostic codes and causes.');
-            }, 500);
+            // Set initial mode
+            switchMode('nlp');
         });
     </script>
 </body>
