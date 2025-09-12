@@ -1,4 +1,21 @@
-Flask==3.0.3
-google-genai==0.3.2
-python-dotenv==1.0.1
+# Web Framework
+Flask==3.1.2
+
+# AI/ML Libraries
+google-generativeai==0.8.5
+nltk==3.9.1
+scikit-learn==1.7.2
+numpy==2.3.3
+
+# String Processing
+fuzzywuzzy==0.18.0
+python-Levenshtein==0.27.1
+
+# Image Processing
 Pillow==10.4.0
+
+# Configuration
+python-dotenv==1.0.1
+
+# Utilities
+requests==2.32.5
