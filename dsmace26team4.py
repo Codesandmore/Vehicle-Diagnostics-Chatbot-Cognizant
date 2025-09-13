@@ -3,7 +3,7 @@ import base64
 import google.generativeai as genai
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
-from nlp.diagnostic_processor import DiagnosticProcessor
+from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
 # from PIL import Image
 # import io
 # import json
@@ -22,14 +22,14 @@ else:
 
 app = Flask(__name__)
 
-# Initialize the diagnostic processor for NLP functionality
+# Initialize the enhanced diagnostic processor for NLP functionality
 try:
     obd_codes_path = os.path.join(os.path.dirname(__file__), 'data', 'obd_codes.json')
-    diagnostic_processor = DiagnosticProcessor(obd_codes_path)
-    print("✅ Diagnostic processor initialized successfully")
+    diagnostic_processor = EnhancedDiagnosticProcessor(obd_codes_path)
+    print("✅ Enhanced diagnostic processor initialized successfully")
     nlp_available = True
 except Exception as e:
-    print(f"❌ Error initializing diagnostic processor: {e}")
+    print(f"❌ Error initializing enhanced diagnostic processor: {e}")
     diagnostic_processor = None
     nlp_available = False
 
@@ -40,11 +40,12 @@ def index():
 @app.route("/send_message", methods=["POST"])
 def send_message():
     """
-    Main chatbot endpoint that:
+    Enhanced chatbot endpoint with intelligent routing:
     1. Gets prompt from HTML
-    2. Processes with diagnostic processor to get OBD codes
-    3. Combines prompt + OBD codes and sends to Gemini
-    4. Returns Gemini's response for chatbot display
+    2. Uses enhanced diagnostic processor with 70% confidence threshold
+    3. Routes high-confidence queries: NLP codes + LLM analysis
+    4. Routes low-confidence queries: Direct LLM consultation
+    5. Returns appropriate response for chatbot display
     """
     try:
         # Get user message and image from the form
@@ -55,40 +56,44 @@ def send_message():
         if not user_message and (not uploaded_file or not uploaded_file.filename):
             return jsonify({"reply": "Please provide a message or upload an image."})
         
-        # Step 1: Process user message with NLP diagnostic processor to get OBD codes
-        obd_codes_info = []
-        nlp_analysis = {}
+        # Step 1: Enhanced NLP Processing with Intelligent Routing
+        nlp_results = {}
+        routing_decision = 'LLM_ONLY'  # Default fallback
+        confidence_info = {}
         
         if user_message and nlp_available and diagnostic_processor:
             try:
-                print(f"🔍 Processing message with NLP: {user_message}")
-                nlp_results = diagnostic_processor.process_user_input(user_message, top_n=5)
-                nlp_analysis = nlp_results.get('analysis', {})
+                print(f"🔍 Processing with enhanced NLP routing: {user_message}")
                 
-                # Extract OBD codes with their details
-                for match in nlp_results.get('matches', []):
-                    confidence_score = match.get('confidence_score', 0)
-                    
-                    # Convert percentage string to float if needed
-                    if isinstance(confidence_score, str) and '%' in confidence_score:
-                        confidence_score = float(confidence_score.strip('%')) / 100
-                    
-                    obd_code_info = {
-                        'code': match.get('code_id', ''),
-                        'description': match.get('description', ''),
-                        'confidence': confidence_score,
-                        'priority': match.get('priority', 'Medium'),
-                        'common_causes': match.get('common_causes', []),
-                        'likely_cause': match.get('confirmation', '')
-                    }
-                    obd_codes_info.append(obd_code_info)
-                    
-                print(f"📋 Found {len(obd_codes_info)} OBD code matches")
+                # Use enhanced processor with 90% confidence threshold
+                nlp_results = diagnostic_processor.process_user_input(
+                    user_message, 
+                    top_n=5, 
+                    confidence_threshold=90.0
+                )
+                
+                routing_decision = nlp_results.get('analysis', {}).get('routing_decision', 'LLM_ONLY')
+                route_to_llm_only = nlp_results.get('route_to_llm', True)
+                
+                confidence_info = {
+                    'max_confidence': nlp_results.get('max_confidence', 0),
+                    'high_confidence_count': nlp_results.get('high_confidence_count', 0),
+                    'threshold': nlp_results.get('confidence_threshold', 70),
+                    'diagnostic_relevance': nlp_results.get('analysis', {}).get('diagnostic_relevance', 0),
+                    'relevance_class': nlp_results.get('analysis', {}).get('relevance_classification', 'unknown')
+                }
+                
+                print(f"📊 Routing decision: {routing_decision}")
+                print(f"📊 Max confidence: {confidence_info['max_confidence']:.1f}%")
+                print(f"📊 High confidence matches: {confidence_info['high_confidence_count']}")
+                print(f"📊 Diagnostic relevance: {confidence_info['diagnostic_relevance']:.1f}% ({confidence_info['relevance_class']})")
                 
             except Exception as e:
-                print(f"⚠️ NLP processing error: {e}")
+                print(f"⚠️ Enhanced NLP processing error: {e}")
+                routing_decision = 'LLM_ONLY'
+                route_to_llm_only = True
         
-        # Step 2: Build enhanced prompt for Gemini with OBD codes
+        # Step 2: Build Gemini prompt based on routing decision
         if not llm_available:
             return jsonify({"reply": "❌ Gemini AI is not available. Please check your API key configuration."})
         
@@ -96,49 +101,20 @@ def send_message():
         system_prompt = """You are an expert vehicle diagnostics technician and automotive advisor. 
         Provide clear, practical, and safety-focused advice. Use simple language that car owners can understand.
         When diagnostic codes are provided, explain them thoroughly and give step-by-step troubleshooting advice.
-        If there are clarity issue in the user's description, ask clarifying questions.
-        Provide step by step solutions, safety tips, and maintenance advice.
-        If available, provide solution videos or links to reputable sources.
+        If there are clarity issues in the user's description, ask clarifying questions.
+        Provide step-by-step solutions, safety tips, and maintenance advice.
+        Always prioritize safety and recommend professional help when necessary.
         """
         
-        # Build the enhanced prompt with OBD codes
-        enhanced_prompt = f"User Question: {user_message}\n\n"
-        
-        # Add OBD codes information if found
-        if obd_codes_info:
-            enhanced_prompt += "🔍 DIAGNOSTIC ANALYSIS RESULTS:\n\n"
-            
-            for i, code_info in enumerate(obd_codes_info, 1):
-                enhanced_prompt += f"{i}. **OBD Code: {code_info['code']}**\n"
-                enhanced_prompt += f"   Description: {code_info['description']}\n"
-                enhanced_prompt += f"   Confidence: {code_info['confidence']:.1%}\n"
-                enhanced_prompt += f"   Priority: {code_info['priority']}\n"
-                
-                if code_info['common_causes']:
-                    enhanced_prompt += "   Common Causes:\n"
-                    for cause in code_info['common_causes']:
-                        enhanced_prompt += f"   • {cause}\n"
-                
-                if code_info['likely_cause']:
-                    enhanced_prompt += f"   Most Likely Cause: {code_info['likely_cause']}\n"
-                
-                enhanced_prompt += "\n"
-            
-            # Add analysis context
-            if nlp_analysis.get('detected_symptoms'):
-                enhanced_prompt += f"Detected Symptoms: {', '.join(nlp_analysis['detected_symptoms'])}\n\n"
-            
-            enhanced_prompt += """Please provide a comprehensive response that:
-1. Explains what these diagnostic codes mean in simple terms
-2. Confirms or provides additional insights about the diagnosis
-3. Gives step-by-step troubleshooting instructions
-4. Mentions any safety precautions
-5. Suggests when to seek professional help
-6. Provides preventive maintenance tips
-
-"""
+        # Build enhanced prompt based on routing decision
+        if routing_decision == 'NLP' and nlp_results.get('matches'):
+            # High-confidence route: Include NLP diagnostic codes
+            enhanced_prompt = _build_nlp_enhanced_prompt(user_message, nlp_results, confidence_info)
+            print("🎯 Using NLP-to-LLM routing with diagnostic codes")
         else:
-            enhanced_prompt += "No specific diagnostic codes were identified, but please provide helpful vehicle advice based on the user's question.\n\n"
+            # Low-confidence route: Direct LLM consultation
+            enhanced_prompt = _build_direct_llm_prompt(user_message, nlp_results, confidence_info)
+            print("🤖 Using direct LLM routing for general consultation")
         
         # Prepare content for Gemini
         contents = []
@@ -162,10 +138,10 @@ def send_message():
                 contents.append(image_content)
                 
                 # Add image analysis instruction
-                if obd_codes_info:
-                    enhanced_prompt += "🖼️ IMAGE ANALYSIS: Please also analyze the uploaded image in relation to the diagnostic codes above. Look for visual confirmation of the identified issues.\n"
+                if routing_decision == 'NLP':
+                    enhanced_prompt += "\n🖼️ IMAGE ANALYSIS: Please also analyze the uploaded image in relation to the diagnostic codes above. Look for visual confirmation of the identified issues."
                 else:
-                    enhanced_prompt += "🖼️ IMAGE ANALYSIS: Please analyze this vehicle image and identify any visible issues or provide relevant advice.\n"
+                    enhanced_prompt += "\n🖼️ IMAGE ANALYSIS: Please analyze this vehicle image and provide relevant automotive advice based on what you see."
                     
             except Exception as e:
                 return jsonify({"reply": f"❌ Error processing image: {str(e)}"})
@@ -176,31 +152,111 @@ def send_message():
         
         # Step 4: Send to Gemini and get response
         try:
-            print("🤖 Sending request to Gemini AI...")
+            print("🤖 Sending enhanced request to Gemini AI...")
             
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(contents)
             
             gemini_response = response.text
+            
+            # Add routing information to response for user awareness
+            routing_info = _generate_routing_info(routing_decision, confidence_info)
+            final_response = f"{gemini_response}\n\n{routing_info}"
+            
             print("✅ Received response from Gemini AI")
             
         except Exception as e:
             print(f"❌ Gemini API error: {e}")
-            gemini_response = f"Sorry, I encountered an error while processing your request with Gemini AI: {str(e)}"
+            final_response = f"Sorry, I encountered an error while processing your request with Gemini AI: {str(e)}"
         
         # Step 5: Return response for chatbot display
-        return jsonify({"reply": gemini_response})
+        return jsonify({"reply": final_response})
         
     except Exception as e:
         print(f"❌ General error in send_message: {e}")
         return jsonify({"reply": f"Sorry, an unexpected error occurred: {str(e)}"})
 
+def _build_nlp_enhanced_prompt(user_message, nlp_results, confidence_info):
+    """Build clean prompt for high-confidence NLP-to-LLM routing without exposing confidence details"""
+    enhanced_prompt = f"User Question: {user_message}\n\n"
+    enhanced_prompt += "🎯 DIAGNOSTIC ANALYSIS:\n\n"
+    
+    matches = nlp_results.get('matches', [])
+    analysis = nlp_results.get('analysis', {})
+    
+    for i, match in enumerate(matches, 1):
+        enhanced_prompt += f"{i}. **OBD Code: {match.get('code_id', 'Unknown')}**\n"
+        enhanced_prompt += f"   Description: {match.get('description', 'No description')}\n"
+        enhanced_prompt += f"   Priority: {match.get('priority', 'Medium')}\n"
+        
+        if match.get('common_causes'):
+            enhanced_prompt += "   Common Causes:\n"
+            for cause in match['common_causes']:
+                enhanced_prompt += f"   • {cause}\n"
+        
+        if match.get('confirmation'):
+            enhanced_prompt += f"   Most Likely Cause: {match['confirmation']}\n"
+        
+        enhanced_prompt += "\n"
+    
+    # Add analysis context without confidence details
+    if analysis.get('detected_symptoms'):
+        enhanced_prompt += f"Detected Symptoms: {', '.join(analysis['detected_symptoms'])}\n\n"
+    
+    enhanced_prompt += """Please provide a comprehensive expert analysis that:
+1. Confirms and explains these diagnostic codes in detail
+2. Provides step-by-step troubleshooting and repair guidance
+3. Explains the relationship between codes if multiple are present
+4. Gives specific safety precautions and when to seek professional help
+5. Suggests preventive maintenance to avoid recurrence
+6. Estimates repair complexity and potential costs if appropriate
+
+"""
+    return enhanced_prompt
+
+def _build_direct_llm_prompt(user_message, nlp_results, confidence_info):
+    """Build clean prompt for low-confidence direct LLM routing"""
+    enhanced_prompt = f"User Question: {user_message}\n\n"
+    
+    # Explain why direct routing was chosen without exposing confidence details
+    reason = nlp_results.get('reason', 'Query requires general automotive consultation')
+    enhanced_prompt += f"🤖 GENERAL CONSULTATION MODE: {reason}\n\n"
+    
+    # Include diagnostic hints if available, but without confidence details
+    if nlp_results.get('matches'):
+        enhanced_prompt += "📋 DIAGNOSTIC HINTS:\n"
+        enhanced_prompt += f"Found {len(nlp_results['matches'])} potential diagnostic codes:\n"
+        
+        for i, match in enumerate(nlp_results['matches'][:3], 1):  # Limit to top 3
+            enhanced_prompt += f"{i}. {match.get('code_id', 'Unknown')}: {match.get('description', 'No description')}\n"
+        
+        enhanced_prompt += "\nNote: These codes are provided as potential hints only.\n\n"
+    
+    enhanced_prompt += """Please provide helpful automotive guidance that:
+1. Addresses the user's question with general automotive knowledge
+2. Asks clarifying questions if the issue description is unclear
+3. Provides practical troubleshooting steps appropriate for the question
+4. Suggests when professional diagnosis might be needed
+5. Gives relevant safety advice and maintenance tips
+6. Uses any diagnostic hints carefully and with appropriate disclaimers
+
+"""
+    return enhanced_prompt
+
+def _generate_routing_info(routing_decision, confidence_info):
+    """Generate clean user-friendly routing information without confidence details"""
+    if routing_decision == 'NLP':
+        return f"🎯 *Analysis based on diagnostic code matches*"
+    else:
+        return "🤖 *General automotive consultation*"
+
 @app.route("/diagnose", methods=["POST"])
 def diagnose():
-    """Pure NLP diagnosis endpoint for testing"""
+    """Enhanced NLP diagnosis endpoint with routing information"""
     try:
         data = request.get_json()
         user_input = data.get("message", "").strip()
+        confidence_threshold = data.get("confidence_threshold", 90.0)
         
         if not user_input:
             return jsonify({
@@ -214,48 +270,75 @@ def diagnose():
                 "success": False
             })
         
-        # Process the user input with NLP
-        results = diagnostic_processor.process_user_input(user_input, top_n=5)
+        # Process the user input with enhanced NLP
+        results = diagnostic_processor.process_user_input(
+            user_input, 
+            top_n=5, 
+            confidence_threshold=confidence_threshold
+        )
         
-        if not results.get('matches'):
+        # Handle different routing scenarios
+        if not results.get('success', True):
             return jsonify({
-                "message": "No matching diagnostic codes found. Please provide more specific details about your vehicle problem.",
-                "success": True,
+                "success": False,
+                "route_to_llm_only": results.get('route_to_llm', True),
+                "routing_decision": results.get('routing_decision', 'LLM_ONLY'),
+                "reason": results.get('reason', 'Processing failed'),
+                "diagnostic_relevance": results.get('diagnostic_relevance', 0),
+                "relevance_classification": results.get('relevance_classification', 'unknown'),
                 "matches": [],
                 "analysis": results.get('analysis', {})
             })
         
-        # Format the response
+        # Format the response for enhanced routing
         formatted_matches = []
-        for match in results['matches']:
+        for match in results.get('matches', []):
             formatted_match = {
-                "code": match['code_id'],
-                "description": match['description'],
-                "priority": match['priority'],
-                "confidence": f"{match['confidence_score']:.1%}",
-                "common_causes": match['common_causes'],
-                "likely_cause": match['confirmation']
+                "code": match.get('code_id', 'Unknown'),
+                "description": match.get('description', 'No description'),
+                "priority": match.get('priority', 'Medium'),
+                "confidence": match.get('confidence_percentage', 'Unknown'),
+                "confidence_score": match.get('confidence_score', 0),
+                "confidence_breakdown": match.get('confidence_breakdown', {}),
+                "common_causes": match.get('common_causes', []),
+                "likely_cause": match.get('confirmation', ''),
+                "source_method": match.get('source_method', 'Unknown')
             }
             formatted_matches.append(formatted_match)
         
+        # Enhanced response with routing information
         response_data = {
             "success": True,
+            "route_to_llm_only": results.get('route_to_llm', False),
+            "routing_decision": "NLP_TO_LLM" if results.get('analysis', {}).get('routing_decision') == 'NLP' else "LLM_ONLY",
+            "message": results.get('message', f"Found {len(formatted_matches)} diagnostic matches"),
             "user_input": user_input,
             "matches": formatted_matches,
-            "analysis": {
-                "detected_symptoms": results['analysis'].get('detected_symptoms', []),
-                "total_matches": len(formatted_matches)
+            "confidence_analysis": {
+                "max_confidence": results.get('max_confidence', 0),
+                "high_confidence_count": results.get('high_confidence_count', 0),
+                "confidence_threshold": results.get('confidence_threshold', confidence_threshold),
+                "diagnostic_relevance": results.get('diagnostic_relevance', 0),
+                "relevance_classification": results.get('relevance_classification', 'unknown')
             },
-            "message": f"Found {len(formatted_matches)} potential diagnostic code(s) based on your description."
+            "analysis": {
+                "detected_symptoms": results.get('analysis', {}).get('detected_symptoms', []),
+                "total_matches": len(formatted_matches),
+                "enhanced_matches": results.get('analysis', {}).get('enhanced_matches', 0),
+                "routing_decision": "NLP_TO_LLM" if results.get('analysis', {}).get('routing_decision') == 'NLP' else "LLM_ONLY",
+                "processing_method": "enhanced_confidence_routing"
+            }
         }
         
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"Error in diagnose endpoint: {e}")
+        print(f"Error in enhanced diagnose endpoint: {e}")
         return jsonify({
             "error": f"An error occurred during diagnosis: {str(e)}",
-            "success": False
+            "success": False,
+            "route_to_llm_only": True,
+            "routing_decision": "LLM_ONLY"
         })
 
 @app.route("/health", methods=["GET"])
