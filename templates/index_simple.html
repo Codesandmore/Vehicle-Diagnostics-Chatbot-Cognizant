@@ -198,7 +198,8 @@
       }
 
       #send-button,
-      #image-button {
+      #image-button,
+      #voice-button {
         background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
         color: white;
         border: none;
@@ -214,7 +215,8 @@
       }
 
       #send-button:hover,
-      #image-button:hover {
+      #image-button:hover,
+      #voice-button:hover {
         transform: scale(1.1);
         box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
       }
@@ -227,6 +229,29 @@
 
       #image-button.active {
         background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+      }
+
+      #voice-button.recording {
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      #voice-button.disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .image-preview {
@@ -408,6 +433,9 @@
               </div>
             </div>
             <div class="action-buttons">
+              <button id="voice-button" type="button" title="Voice recording">
+                🎤
+              </button>
               <button id="image-button" type="button" title="Upload image">
                 📷
               </button>
@@ -432,6 +460,7 @@
       const sendButton = document.getElementById("send-button");
       const imageInput = document.getElementById("image-input");
       const imageButton = document.getElementById("image-button");
+      const voiceButton = document.getElementById("voice-button");
       const imagePreview = document.getElementById("image-preview");
       const previewImg = document.getElementById("preview-img");
       const removeImageBtn = document.getElementById("remove-image");
@@ -578,6 +607,61 @@
         }
       });
 
+      // Initialize speech recognition
+      let speechRecognition = null;
+
+      // Load speech recognition module
+      async function initializeSpeechRecognition() {
+        try {
+          // Create speech recognition instance
+          speechRecognition = new SpeechRecognition(
+            userInput,
+            "/transcribe_audio"
+          );
+
+          // Set the voice button
+          speechRecognition.setVoiceButton(voiceButton);
+
+          // Setup voice button click handler
+          voiceButton.addEventListener("click", async () => {
+            try {
+              await speechRecognition.toggleRecording();
+            } catch (error) {
+              console.error("Voice recording error:", error);
+              addMessage(`❌ Voice recording error: ${error.message}`);
+            }
+          });
+
+          // Update button state based on recording status
+          speechRecognition.onStatusChange = (status) => {
+            switch (status) {
+              case "recording":
+                voiceButton.classList.add("recording");
+                voiceButton.title = "Stop recording";
+                voiceButton.innerHTML = "⏹️";
+                break;
+              case "processing":
+                voiceButton.classList.remove("recording");
+                voiceButton.classList.add("disabled");
+                voiceButton.title = "Processing...";
+                voiceButton.innerHTML = "⏳";
+                break;
+              case "idle":
+                voiceButton.classList.remove("recording", "disabled");
+                voiceButton.title = "Voice recording";
+                voiceButton.innerHTML = "🎤";
+                break;
+            }
+          };
+
+          console.log("Speech recognition initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize speech recognition:", error);
+          voiceButton.classList.add("disabled");
+          voiceButton.title = "Voice recording not available";
+        }
+      }
+
       // Welcome message
       window.addEventListener("load", () => {
         setTimeout(() => {
@@ -585,7 +669,13 @@
             "👋 Welcome! I'm your Vehicle Diagnostics AI Assistant. I can help with vehicle problems, maintenance questions, and diagnostic advice. \n\nI use both **NLP diagnostic analysis** and **AI intelligence** to provide comprehensive answers. Just describe your vehicle issue or ask any automotive question!"
           );
         }, 500);
+
+        // Initialize speech recognition after page load
+        initializeSpeechRecognition();
       });
     </script>
+
+    <!-- Speech Recognition Module -->
+    <script src="{{ url_for('static', filename='speech_recognition.js') }}"></script>
   </body>
 </html>
