@@ -1,0 +1,2 @@
+# Minimal Standalone Vehicle Diagnostics Requirements
+Flask==2.3.3
