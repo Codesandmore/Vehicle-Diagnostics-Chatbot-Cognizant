@@ -8,10 +8,6 @@ from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
 # import io
 # import json
 
-# Configure logging for debugging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -344,84 +340,6 @@ def diagnose():
             "route_to_llm_only": True,
             "routing_decision": "LLM_ONLY"
         })
-
-@app.route("/transcribe_audio", methods=["POST"])
-def transcribe_audio():
-    """Speech-to-text endpoint using OpenAI Whisper"""
-    try:
-        if 'audio' not in request.files:
-            return jsonify({
-                "error": "No audio file provided", 
-                "success": False
-            }), 400
-        
-        audio_file = request.files['audio']
-        if audio_file.filename == '':
-            return jsonify({
-                "error": "No audio file selected", 
-                "success": False
-            }), 400
-        
-        # Validate audio file
-        validator = AudioValidator()
-        is_valid, validation_error = validator.validate_file(audio_file)
-        
-        if not is_valid:
-            return jsonify({
-                "error": f"Invalid audio file: {validation_error}", 
-                "success": False
-            }), 400
-        
-        # Save temporary file for processing
-        processor = AudioProcessor()
-        temp_path = None
-        
-        try:
-            temp_path = processor.save_temp_file(audio_file)
-            
-            # Transcribe using Whisper
-            result = transcribe_audio_file(temp_path)
-            
-            if result['success']:
-                logger.info(f"Successfully transcribed audio: {result['text'][:50]}...")
-                return jsonify({
-                    "success": True,
-                    "text": result['text'],
-                    "confidence": result.get('confidence', 0.0),
-                    "duration": result.get('duration', 0.0)
-                })
-            else:
-                logger.error(f"Transcription failed: {result['error']}")
-                return jsonify({
-                    "error": result['error'], 
-                    "success": False
-                }), 500
-                
-        finally:
-            # Clean up temporary file
-            if temp_path:
-                processor.cleanup_temp_file(temp_path)
-                
-    except Exception as e:
-        logger.error(f"Error in transcribe_audio endpoint: {e}")
-        return jsonify({
-            "error": f"An error occurred during transcription: {str(e)}",
-            "success": False
-        }), 500
-
-@app.route("/speech_status", methods=["GET"])
-def speech_status():
-    """Check speech recognition system status"""
-    try:
-        status = get_speech_status()
-        return jsonify(status)
-    except Exception as e:
-        logger.error(f"Error getting speech status: {e}")
-        return jsonify({
-            "error": f"Failed to get speech status: {str(e)}",
-            "success": False,
-            "whisper_available": False
-        }), 500
 
 @app.route("/health", methods=["GET"])
 def health():
