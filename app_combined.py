@@ -4,9 +4,9 @@ import google.generativeai as genai
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from nlp.diagnostic_processor import DiagnosticProcessor
-from PIL import Image
-import io
-import json
+# from PIL import Image
+# import io
+# import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -95,7 +95,11 @@ def send_message():
         # Create system prompt for vehicle expert
         system_prompt = """You are an expert vehicle diagnostics technician and automotive advisor. 
         Provide clear, practical, and safety-focused advice. Use simple language that car owners can understand.
-        When diagnostic codes are provided, explain them thoroughly and give step-by-step troubleshooting advice."""
+        When diagnostic codes are provided, explain them thoroughly and give step-by-step troubleshooting advice.
+        If there are clarity issue in the user's description, ask clarifying questions.
+        Provide step by step solutions, safety tips, and maintenance advice.
+        If available, provide solution videos or links to reputable sources.
+        """
         
         # Build the enhanced prompt with OBD codes
         enhanced_prompt = f"User Question: {user_message}\n\n"
@@ -111,7 +115,7 @@ def send_message():
                 enhanced_prompt += f"   Priority: {code_info['priority']}\n"
                 
                 if code_info['common_causes']:
-                    enhanced_prompt += f"   Common Causes:\n"
+                    enhanced_prompt += "   Common Causes:\n"
                     for cause in code_info['common_causes']:
                         enhanced_prompt += f"   • {cause}\n"
                 
