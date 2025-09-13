@@ -197,71 +197,317 @@ class DiagnosticProcessor:
     
     def _calculate_enhanced_confidence(self, user_input, code_data, tfidf_score=0, fuzzy_score=0, symptoms_matched=[]):
         """
-        Enhanced confidence calculation with multiple factors
-        Returns a confidence score between 0 and 100
+        AGGRESSIVE confidence calculation using ACTUAL OBD data comparison
+        Now properly compares user input with actual JSON data content
         """
-        confidence_factors = {}
+        factors = {}
+        user_lower = user_input.lower().strip()
         
-        # 1. Base semantic similarity (40% weight)
-        semantic_score = max(tfidf_score, fuzzy_score)
-        confidence_factors['semantic'] = min(semantic_score * 40, 40)
+        # Get ACTUAL text content from the OBD code data
+        code_description = code_data.get('description', '').lower()
+        code_causes = [cause.lower() for cause in code_data.get('common_causes', [])]
+        code_id = code_data.get('id', '').lower()
         
-        # 2. Symptom keyword matching (30% weight)
-        user_input_lower = user_input.lower()
-        searchable_text = f"{code_data.get('description', '')} {' '.join(code_data.get('common_causes', []))}"
+        print(f"🔍 CONFIDENCE: Analyzing {code_id.upper()} vs '{user_input}'")
+        print(f"   Code description: '{code_description}'")
+        print(f"   Code causes: {code_causes}")
         
-        # Count exact keyword matches
-        keyword_matches = 0
-        total_keywords = 0
+        # 1. EXACT CODE ID MATCH (Instant 95%)
+        if code_id and code_id in user_lower:
+            print(f"🎯 EXACT CODE ID MATCH: {code_id.upper()} found in user input!")
+            return 95, {'exact_code_id': True, 'instant_match': True}
         
-        for symptom_type, keywords in self.symptom_keywords.items():
-            total_keywords += len(keywords)
-            for keyword in keywords:
-                if keyword in user_input_lower and keyword in searchable_text.lower():
-                    keyword_matches += 1
+        # 2. DIRECT TEXT MATCHING WITH ACTUAL DATA (60% weight)
+        text_match_score = 0
         
-        keyword_score = (keyword_matches / max(total_keywords, 1)) * 30 if total_keywords > 0 else 0
-        confidence_factors['keywords'] = min(keyword_score, 30)
+        # A. EXACT DESCRIPTION MATCHING
+        # Split description into meaningful words
+        desc_words = [word for word in code_description.split() if len(word) > 2]
+        matched_desc_words = []
         
-        # 3. Automotive context strength (15% weight)
-        automotive_terms = [
-            'engine', 'motor', 'car', 'vehicle', 'check engine', 'light', 'code',
-            'misfire', 'idle', 'rough', 'stall', 'oxygen', 'sensor', 'fuel',
-            'exhaust', 'emission', 'coolant', 'temperature', 'brake', 'transmission'
+        for word in desc_words:
+            if word in user_lower:
+                matched_desc_words.append(word)
+                text_match_score += 8  # 8 points per description word match
+                print(f"   ✅ Description word match: '{word}'")
+        
+        # B. EXACT PHRASE MATCHING from description
+        # Check for multi-word phrases from actual description
+        if len(desc_words) > 1:
+            for i in range(len(desc_words) - 1):
+                for length in [3, 2]:  # Try 3-word and 2-word phrases
+                    if i + length <= len(desc_words):
+                        phrase = ' '.join(desc_words[i:i+length])
+                        if len(phrase) > 6 and phrase in user_lower:
+                            text_match_score += 20  # Big bonus for phrase matches
+                            print(f"   🎯 EXACT PHRASE MATCH: '{phrase}' (+20)")
+        
+        # C. COMMON CAUSES MATCHING with actual data
+        matched_causes = []
+        for cause in code_causes:
+            cause_words = [word for word in cause.split() if len(word) > 2]
+            
+            # Check for exact cause matches
+            if cause in user_lower:
+                text_match_score += 15  # 15 points for exact cause match
+                matched_causes.append(cause)
+                print(f"   🎯 EXACT CAUSE MATCH: '{cause}' (+15)")
+            else:
+                # Check for partial cause word matches
+                cause_word_matches = 0
+                for word in cause_words:
+                    if word in user_lower:
+                        cause_word_matches += 1
+                
+                if cause_word_matches > 0:
+                    partial_score = (cause_word_matches / len(cause_words)) * 10
+                    text_match_score += partial_score
+                    print(f"   ✅ Partial cause match: '{cause}' - {cause_word_matches}/{len(cause_words)} words (+{partial_score:.1f})")
+        
+        text_match_score = min(text_match_score, 60)  # Cap at 60%
+        factors['actual_data_matching'] = text_match_score
+        
+        # 3. SEMANTIC SIMILARITY FROM NLP (25% weight)
+        semantic_score = max(tfidf_score, fuzzy_score) * 25
+        factors['nlp_semantic_score'] = semantic_score
+        
+        # 4. WORD OVERLAP WITH ACTUAL DATA (10% weight)
+        all_code_words = set()
+        all_code_words.update(desc_words)
+        for cause in code_causes:
+            all_code_words.update(cause.split())
+        
+        user_words = set([word for word in user_lower.split() if len(word) > 2])
+        
+        if all_code_words and user_words:
+            word_overlap = all_code_words.intersection(user_words)
+            overlap_ratio = len(word_overlap) / len(all_code_words)
+            overlap_score = overlap_ratio * 10
+            
+            if overlap_ratio > 0.3:  # 30%+ overlap gets bonus
+                overlap_score += 5
+                print(f"   🎯 HIGH WORD OVERLAP: {overlap_ratio:.1%} (+5 bonus)")
+            
+            factors['word_overlap_actual'] = overlap_score
+            print(f"   Word overlap: {word_overlap}")
+        else:
+            factors['word_overlap_actual'] = 0
+        
+        # 5. AUTOMOTIVE CONTEXT (5% weight)
+        automotive_bonus = 0
+        automotive_indicators = ['sensor', 'engine', 'system', 'circuit', 'malfunction', 'fault', 'code', 'dtc', 'obd']
+        for indicator in automotive_indicators:
+            if indicator in user_lower:
+                automotive_bonus += 1
+        
+        automotive_score = min(automotive_bonus, 5)
+        factors['automotive_context'] = automotive_score
+        
+        # Calculate base confidence
+        base_confidence = sum(factors.values())
+        
+        # 6. AGGRESSIVE MULTIPLIERS based on actual data matches
+        final_confidence = base_confidence
+        
+        # SUPER BOOST: Strong matches across multiple factors
+        strong_factors = sum([
+            1 if text_match_score >= 30 else 0,  # Strong text matching
+            1 if semantic_score >= 15 else 0,    # Strong semantic similarity
+            1 if len(matched_desc_words) >= 2 else 0,  # Multiple description words
+            1 if len(matched_causes) >= 1 else 0      # At least one cause match
+        ])
+        
+        if strong_factors >= 3:  # Multiple strong indicators
+            final_confidence = min(final_confidence * 1.4, 96)  # 40% boost!
+            factors['multi_strong_boost'] = True
+            print(f"🚀 MULTI-STRONG BOOST: {strong_factors} strong factors! (+40%)")
+        elif strong_factors >= 2:  # Two strong indicators
+            final_confidence = min(final_confidence * 1.25, 94)  # 25% boost
+            factors['double_strong_boost'] = True
+            print(f"🚀 DOUBLE-STRONG BOOST: {strong_factors} strong factors (+25%)")
+        elif strong_factors >= 1:  # One strong indicator
+            final_confidence = min(final_confidence * 1.1, 92)  # 10% boost
+            factors['single_strong_boost'] = True
+            print(f"🎯 STRONG BOOST: {strong_factors} strong factor (+10%)")
+        
+        # SPECIAL CASES based on actual data
+        # Perfect description match
+        if len(matched_desc_words) >= len(desc_words) and len(desc_words) >= 2:
+            final_confidence = min(final_confidence + 15, 96)
+            factors['perfect_description_match'] = True
+            print(f"🎯 PERFECT DESCRIPTION MATCH! (+15)")
+        
+        # Exact cause match
+        if matched_causes:
+            final_confidence = min(final_confidence + 10, 96)
+            factors['exact_cause_match'] = True
+            print(f"🎯 EXACT CAUSE MATCH! (+10)")
+        
+        # MINIMUM THRESHOLDS
+        if text_match_score == 0 and semantic_score < 5:
+            final_confidence = min(final_confidence, 25)  # Cap very weak matches
+            factors['weak_match_penalty'] = True
+            print(f"⚠️  WEAK MATCH: No text matches and low semantic score")
+        
+        # Final confidence (cap at 96% to maintain uncertainty)
+        final_confidence = min(max(final_confidence, 0), 96)
+        
+        print(f"   📊 FINAL CONFIDENCE: {final_confidence:.1f}%")
+        print(f"   📊 Breakdown: Text={text_match_score:.1f}, Semantic={semantic_score:.1f}, Overlap={factors.get('word_overlap_actual', 0):.1f}")
+        
+        return final_confidence, factors
+    
+    def _assess_diagnostic_relevance(self, user_input):
+        """
+        Assess how diagnostically relevant the input is using COMPREHENSIVE automotive vocabulary
+        Returns relevance score (0-100) and classification
+        """
+        user_lower = user_input.lower().strip()
+        tokens = [token.strip() for token in user_input.split()]
+        
+        print(f"🔍 RELEVANCE: Assessing '{user_input}'")
+        
+        # Check for obvious non-diagnostic content first (use word boundaries)
+        non_diagnostic_patterns = [
+            'hello', 'hi', 'hey', 'thanks', 'thank you', 'bye', 'goodbye',
+            'weather', 'time', 'date', 'news', 'music', 'recipe',
+            'how are you', 'what\'s up', 'good morning', 'good evening'
         ]
         
-        context_matches = sum(1 for term in automotive_terms if term in user_input_lower)
-        context_score = min(context_matches / len(automotive_terms), 1.0) * 15
-        confidence_factors['context'] = context_score
+        # Split user input into words for exact matching
+        user_words = set(user_lower.split())
         
-        # 4. Input specificity (10% weight)
-        tokens = user_input.split()
-        specificity_score = min(len(tokens) / 10, 1.0) * 10  # More words = higher specificity
-        confidence_factors['specificity'] = specificity_score
+        for pattern in non_diagnostic_patterns:
+            # Check for exact word matches or phrase matches
+            if ' ' in pattern:  # Multi-word patterns
+                if pattern in user_lower:
+                    print(f"   ❌ Non-diagnostic phrase detected: '{pattern}'")
+                    return 5, "non_diagnostic"
+            else:  # Single word patterns
+                if pattern in user_words:
+                    print(f"   ❌ Non-diagnostic word detected: '{pattern}'")
+                    return 5, "non_diagnostic"
         
-        # 5. Code priority adjustment (5% weight)
-        priority_map = {'High': 5, 'Medium': 3, 'Low': 1}
-        priority_boost = priority_map.get(code_data.get('priority', 'Medium'), 3)
-        confidence_factors['priority'] = priority_boost
+        relevance_score = 0
+        matched_categories = []
         
-        # Calculate final confidence
-        total_confidence = sum(confidence_factors.values())
-        
-        # Apply penalties for certain conditions
-        penalties = 0
-        
-        # Penalty for very short input
-        if len(user_input.split()) < 3:
-            penalties += 10
+        # 1. COMPREHENSIVE AUTOMOTIVE VOCABULARY (50 points)
+        # Use actual automotive terms from the OBD codes data
+        automotive_vocab = {
+            # Basic vehicle components
+            'car', 'vehicle', 'engine', 'motor', 'transmission', 'brake', 'brakes', 'wheel', 'wheels',
+            'battery', 'oil', 'fuel', 'gas', 'gasoline', 'diesel', 'coolant', 'radiator', 'alternator',
+            'starter', 'exhaust', 'muffler', 'tire', 'tires', 'steering', 'suspension',
             
-        # Penalty for generic terms
-        generic_terms = ['problem', 'issue', 'help', 'fix', 'broken']
-        if any(term in user_input_lower for term in generic_terms) and len(tokens) < 5:
-            penalties += 5
+            # Engine and powertrain
+            'cylinder', 'piston', 'valve', 'valves', 'camshaft', 'crankshaft', 'timing', 'belt',
+            'chain', 'head', 'block', 'manifold', 'intake', 'throttle', 'carburetor',
+            
+            # Electrical and sensors
+            'sensor', 'sensors', 'oxygen', 'o2', 'lambda', 'maf', 'map', 'tps', 'iac', 'cam', 'crank',
+            'coil', 'coils', 'plug', 'plugs', 'wire', 'wires', 'harness', 'connector',
+            
+            # Fuel system
+            'injector', 'injectors', 'pump', 'filter', 'rail', 'pressure', 'regulator',
+            
+            # Transmission and drivetrain
+            'shift', 'shifting', 'gear', 'gears', 'clutch', 'torque', 'converter', 'differential',
+            'axle', 'driveshaft', 'cv', 'joint', 'solenoid', 'solenoids',
+            
+            # Exhaust and emissions
+            'catalytic', 'catalyst', 'converter', 'evap', 'egr', 'pcv', 'emission', 'emissions',
+            
+            # Cooling system
+            'thermostat', 'hose', 'hoses', 'water', 'antifreeze', 'fan', 'temperature',
+            
+            # Braking system
+            'pad', 'pads', 'rotor', 'rotors', 'caliper', 'master', 'booster', 'abs',
+            
+            # Electrical system
+            'fuse', 'relay', 'switch', 'motor', 'actuator', 'module', 'ecu', 'pcm', 'bcm',
+            
+            # Diagnostic terms
+            'code', 'codes', 'dtc', 'obd', 'check', 'light', 'warning', 'dash', 'dashboard',
+            'scanner', 'diagnostic', 'diagnostics', 'scan', 'reader'
+        }
         
-        final_confidence = max(total_confidence - penalties, 0)
+        auto_matches = []
+        for word in automotive_vocab:
+            if word in user_lower:
+                auto_matches.append(word)
         
-        return min(final_confidence, 100), confidence_factors
+        auto_score = min(len(auto_matches) * 8, 50)  # 8 points per match, max 50
+        relevance_score += auto_score
+        
+        if auto_matches:
+            matched_categories.append(f"automotive_terms({len(auto_matches)})")
+            print(f"   ✅ Automotive terms: {auto_matches}")
+        
+        # 2. PROBLEM/SYMPTOM INDICATORS (30 points)
+        problem_indicators = {
+            # Direct problem words
+            'problem', 'issue', 'issues', 'trouble', 'error', 'fault', 'faulty', 'defective',
+            'broken', 'bad', 'failed', 'failing', 'malfunction', 'malfunctioning',
+            
+            # Negative indicators
+            'not working', 'won\'t', 'wont', 'can\'t', 'cant', 'doesn\'t', 'doesnt',
+            'refuse', 'refuses', 'stopped', 'quit', 'dead',
+            
+            # Performance issues
+            'rough', 'hard', 'difficult', 'poor', 'low', 'high', 'strange', 'weird', 'unusual',
+            'intermittent', 'occasional', 'sometimes', 'hesitation', 'hesitating', 'stalling',
+            'jerking', 'shaking', 'vibrating', 'grinding', 'squealing', 'knocking',
+            
+            # Operational issues
+            'slow', 'fast', 'loud', 'noisy', 'smoking', 'overheating', 'leaking', 'leak'
+        }
+        
+        problem_matches = []
+        for indicator in problem_indicators:
+            if indicator in user_lower:
+                problem_matches.append(indicator)
+        
+        problem_score = min(len(problem_matches) * 6, 30)  # 6 points per match, max 30
+        relevance_score += problem_score
+        
+        if problem_matches:
+            matched_categories.append(f"problems({len(problem_matches)})")
+            print(f"   ✅ Problem indicators: {problem_matches}")
+        
+        # 3. TECHNICAL/DIAGNOSTIC TERMS (20 points)
+        tech_terms = {
+            'misfire', 'misfiring', 'lean', 'rich', 'knock', 'ping', 'surge', 'idle', 'rpm',
+            'voltage', 'resistance', 'current', 'ground', 'short', 'open', 'circuit',
+            'bank', 'sensor', 'heater', 'catalyst', 'efficiency', 'monitor', 'readiness',
+            'pending', 'stored', 'freeze', 'frame', 'data', 'pid', 'parameter'
+        }
+        
+        tech_matches = []
+        for term in tech_terms:
+            if term in user_lower:
+                tech_matches.append(term)
+        
+        tech_score = min(len(tech_matches) * 5, 20)  # 5 points per match, max 20
+        relevance_score += tech_score
+        
+        if tech_matches:
+            matched_categories.append(f"technical({len(tech_matches)})")
+            print(f"   ✅ Technical terms: {tech_matches}")
+        
+        # CLASSIFY BASED ON SCORE
+        if relevance_score >= 70:
+            classification = "highly_diagnostic"
+        elif relevance_score >= 40:
+            classification = "moderately_diagnostic"  
+        elif relevance_score >= 20:
+            classification = "possibly_diagnostic"
+        else:
+            classification = "non_diagnostic"
+        
+        print(f"   📊 RELEVANCE SCORE: {relevance_score}/100 ({classification})")
+        print(f"   📊 Matched categories: {', '.join(matched_categories) if matched_categories else 'None'}")
+        
+        return relevance_score, classification
 
     def _validate_diagnostic_relevance(self, user_input):
         """
@@ -341,7 +587,10 @@ class DiagnosticProcessor:
         return detected_symptoms
     
     def _calculate_tfidf_similarity(self, user_input):
-        """Calculate TF-IDF cosine similarity between user input and OBD codes"""
+        """
+        Calculate TF-IDF cosine similarity between user input and ALL OBD codes data
+        Now properly scans the actual JSON data instead of predefined keywords
+        """
         if self.tfidf_matrix is None:
             return []
             
@@ -349,64 +598,157 @@ class DiagnosticProcessor:
         processed_input = self._preprocess_text(user_input)
         if not processed_input.strip():
             return []
+        
+        print(f"🔍 TF-IDF: Scanning ALL {len(self.obd_codes)} OBD codes for: '{user_input}'")
             
         try:
             # Transform user input using fitted vectorizer
             user_vector = self.vectorizer.transform([processed_input])
             
-            # Calculate cosine similarity
+            # Calculate cosine similarity against ALL codes
             similarities = cosine_similarity(user_vector, self.tfidf_matrix).flatten()
             
-            # Create results list with code IDs and similarities
+            # Create results list with detailed matching info
             results = []
             code_ids = list(self.searchable_texts.keys())
             
             for i, similarity in enumerate(similarities):
-                if similarity > 0.05:  # Lowered threshold from 0.1 to 0.05
-                    results.append({
-                        'code_id': code_ids[i],
-                        'similarity': float(similarity),  # Ensure it's a float
-                        'method': 'tfidf'
-                    })
+                if similarity > 0.02:  # Very low threshold to catch more potential matches
+                    code_id = code_ids[i]
+                    
+                    # Find the actual code data for this match
+                    code_data = self._find_code_by_id(code_id)
+                    if code_data:
+                        matched_text = self.searchable_texts[code_id]
+                        
+                        results.append({
+                            'code_id': code_id,
+                            'similarity': float(similarity),
+                            'method': 'tfidf',
+                            'description': code_data['description'],
+                            'matched_content': matched_text[:100] + "..." if len(matched_text) > 100 else matched_text
+                        })
+                        
+                        # Log significant matches
+                        if similarity > 0.1:
+                            print(f"   🎯 TF-IDF Strong Match: {code_id} ({similarity:.3f}) - {code_data['description']}")
+                        elif similarity > 0.05:
+                            print(f"   ✅ TF-IDF Good Match: {code_id} ({similarity:.3f}) - {code_data['description']}")
             
-            return sorted(results, key=lambda x: x['similarity'], reverse=True)
+            # Sort by similarity score (highest first)
+            sorted_results = sorted(results, key=lambda x: x['similarity'], reverse=True)
+            
+            print(f"🔍 TF-IDF: Found {len(sorted_results)} potential matches")
+            if sorted_results:
+                print(f"   Top match: {sorted_results[0]['code_id']} ({sorted_results[0]['similarity']:.3f})")
+                
+            return sorted_results
+            
         except Exception as e:
-            print(f"Error in TF-IDF calculation: {e}")
+            print(f"❌ Error in TF-IDF calculation: {e}")
             return []
     
     def _calculate_fuzzy_similarity(self, user_input):
-        """Calculate fuzzy string similarity for exact matches"""
+        """
+        Calculate fuzzy string similarity for exact matches against ALL actual data
+        Now properly scans each OBD code's description and causes individually
+        """
         results = []
         user_input_lower = user_input.lower().strip()
         
         # Skip if input is too short for meaningful fuzzy matching
-        if len(user_input_lower) < 3:  # Reduced from 5 to 3
+        if len(user_input_lower) < 3:
             return []
         
-        for code_id, searchable_text in self.searchable_texts.items():
-            # Calculate different fuzzy matching scores
-            ratio_score = fuzz.ratio(user_input_lower, searchable_text) / 100.0
-            partial_score = fuzz.partial_ratio(user_input_lower, searchable_text) / 100.0
-            token_sort_score = fuzz.token_sort_ratio(user_input_lower, searchable_text) / 100.0
-            token_set_score = fuzz.token_set_ratio(user_input_lower, searchable_text) / 100.0
+        print(f"🔍 FUZZY: Scanning ALL {len(self.obd_codes)} OBD codes for: '{user_input}'")
+        
+        # Scan EVERY single OBD code in the actual data
+        for code_data in self.obd_codes:
+            code_id = code_data['id']
             
-            # Use weighted average, giving more weight to partial matches for flexibility
-            weighted_score = (
-                ratio_score * 0.2 + 
-                partial_score * 0.5 +  # Increased weight for partial matches
-                token_sort_score * 0.2 + 
-                token_set_score * 0.1
-            )
+            # Get all the text content from this code
+            description = code_data.get('description', '').lower()
+            common_causes = [cause.lower() for cause in code_data.get('common_causes', [])]
+            all_causes_text = ' '.join(common_causes)
             
-            # More lenient threshold for fuzzy matching
-            if weighted_score > 0.25:  # Reduced threshold from 0.4 to 0.25
+            # Calculate fuzzy scores against different parts of the code data
+            max_score = 0
+            best_match_text = ""
+            match_type = ""
+            
+            # 1. Match against description
+            if description:
+                desc_ratio = fuzz.ratio(user_input_lower, description) / 100.0
+                desc_partial = fuzz.partial_ratio(user_input_lower, description) / 100.0
+                desc_token_sort = fuzz.token_sort_ratio(user_input_lower, description) / 100.0
+                desc_token_set = fuzz.token_set_ratio(user_input_lower, description) / 100.0
+                
+                # Weighted score for description (prioritize partial and token matches)
+                desc_score = (desc_ratio * 0.2 + desc_partial * 0.4 + desc_token_sort * 0.3 + desc_token_set * 0.1)
+                
+                if desc_score > max_score:
+                    max_score = desc_score
+                    best_match_text = description
+                    match_type = "description"
+            
+            # 2. Match against common causes combined
+            if all_causes_text:
+                causes_ratio = fuzz.ratio(user_input_lower, all_causes_text) / 100.0
+                causes_partial = fuzz.partial_ratio(user_input_lower, all_causes_text) / 100.0
+                causes_token_sort = fuzz.token_sort_ratio(user_input_lower, all_causes_text) / 100.0
+                causes_token_set = fuzz.token_set_ratio(user_input_lower, all_causes_text) / 100.0
+                
+                # Weighted score for causes
+                causes_score = (causes_ratio * 0.1 + causes_partial * 0.5 + causes_token_sort * 0.3 + causes_token_set * 0.1)
+                
+                if causes_score > max_score:
+                    max_score = causes_score
+                    best_match_text = all_causes_text[:50] + "..."
+                    match_type = "causes"
+            
+            # 3. Match against individual causes (for precise matching)
+            for cause in common_causes:
+                if cause and len(cause) > 5:  # Skip very short causes
+                    cause_ratio = fuzz.ratio(user_input_lower, cause) / 100.0
+                    cause_partial = fuzz.partial_ratio(user_input_lower, cause) / 100.0
+                    cause_token_sort = fuzz.token_sort_ratio(user_input_lower, cause) / 100.0
+                    
+                    # Individual cause score
+                    individual_cause_score = (cause_ratio * 0.3 + cause_partial * 0.4 + cause_token_sort * 0.3)
+                    
+                    if individual_cause_score > max_score:
+                        max_score = individual_cause_score
+                        best_match_text = cause
+                        match_type = "individual_cause"
+            
+            # Include if score is above threshold (lowered for better coverage)
+            if max_score > 0.2:  # 20% threshold instead of 25%
                 results.append({
                     'code_id': code_id,
-                    'similarity': weighted_score,
-                    'method': 'fuzzy'
+                    'similarity': max_score,
+                    'method': 'fuzzy',
+                    'description': code_data['description'],
+                    'match_type': match_type,
+                    'matched_text': best_match_text[:50] + "..." if len(best_match_text) > 50 else best_match_text
                 })
+                
+                # Log significant matches
+                if max_score > 0.7:
+                    print(f"   🎯 FUZZY Excellent Match: {code_id} ({max_score:.3f}) - {match_type}: '{best_match_text[:30]}...'")
+                elif max_score > 0.5:
+                    print(f"   ✅ FUZZY Good Match: {code_id} ({max_score:.3f}) - {match_type}: '{best_match_text[:30]}...'")
+                elif max_score > 0.3:
+                    print(f"   🔍 FUZZY Potential Match: {code_id} ({max_score:.3f}) - {match_type}")
         
-        return sorted(results, key=lambda x: x['similarity'], reverse=True)
+        # Sort by similarity score (highest first)
+        sorted_results = sorted(results, key=lambda x: x['similarity'], reverse=True)
+        
+        print(f"🔍 FUZZY: Found {len(sorted_results)} potential matches")
+        if sorted_results:
+            top_match = sorted_results[0]
+            print(f"   Top match: {top_match['code_id']} ({top_match['similarity']:.3f}) - {top_match['match_type']}")
+        
+        return sorted_results
     
     def _find_code_by_id(self, code_id):
         """Find OBD code details by ID"""
@@ -464,26 +806,51 @@ class DiagnosticProcessor:
         
         return sorted(ranked_results, key=lambda x: x[1], reverse=True)
     
-    def process_user_input(self, user_input, top_n=5):
+    def process_user_input(self, user_input, top_n=5, confidence_threshold=90.0):
         """
-        Main method to process user input and return matching OBD codes
+        Enhanced processing with 90% confidence threshold for intelligent LLM routing
         
         Args:
             user_input (str): User's description of the vehicle problem
             top_n (int): Number of top results to return
+            confidence_threshold (float): Minimum confidence to pass codes to LLM (default 90%)
             
         Returns:
-            dict: Contains matched codes, confidence scores, and analysis
+            dict: Contains matched codes, routing decision, confidence scores, and analysis
         """
-        # Validate input
+        # First assess diagnostic relevance
+        relevance_score, relevance_class = self._assess_diagnostic_relevance(user_input)
+        
+        # If clearly non-diagnostic, route directly to LLM
+        if relevance_class == "non_diagnostic":
+            return {
+                'success': False,
+                'route_to_llm_only': True,
+                'diagnostic_relevance': relevance_score,
+                'relevance_classification': relevance_class,
+                'reason': 'Query appears to be non-diagnostic - routing to general LLM',
+                'matches': [],
+                'analysis': {
+                    'diagnostic_relevance_score': relevance_score,
+                    'classification': relevance_class,
+                    'routing_decision': 'LLM_ONLY'
+                }
+            }
+        
+        # Validate diagnostic input
         is_valid, validation_message = self._is_valid_diagnostic_input(user_input)
         if not is_valid:
             return {
+                'success': False,
+                'route_to_llm_only': True,
+                'diagnostic_relevance': relevance_score,
                 'error': validation_message,
                 'matches': [],
                 'analysis': {
                     'validation_failed': True,
-                    'reason': validation_message
+                    'reason': validation_message,
+                    'diagnostic_relevance_score': relevance_score,
+                    'routing_decision': 'LLM_ONLY'
                 }
             }
         
@@ -494,63 +861,165 @@ class DiagnosticProcessor:
         tfidf_results = self._calculate_tfidf_similarity(user_input)
         fuzzy_results = self._calculate_fuzzy_similarity(user_input)
         
-        # If no meaningful results from either method, return early
+        # If no meaningful results from either method
         if not tfidf_results and not fuzzy_results:
             return {
-                'error': 'No matching diagnostic codes found. Your symptoms might be too general or not in our database.',
+                'success': False,
+                'route_to_llm_only': True,
+                'diagnostic_relevance': relevance_score,
+                'reason': 'No diagnostic codes found in database - routing to LLM for general advice',
                 'matches': [],
                 'analysis': {
                     'detected_symptoms': symptoms,
                     'total_codes_analyzed': len(self.obd_codes),
                     'tfidf_matches': 0,
                     'fuzzy_matches': 0,
-                    'user_input_processed': self._preprocess_text(user_input)
+                    'diagnostic_relevance_score': relevance_score,
+                    'routing_decision': 'LLM_ONLY'
                 }
             }
         
-        # Rank and combine results
-        ranked_results = self._rank_results(tfidf_results, fuzzy_results, symptoms)
+        # Enhanced confidence calculation for each potential match
+        enhanced_matches = []
         
-        # If no results meet minimum threshold, return early
-        if not ranked_results:
-            return {
-                'error': 'No diagnostic codes found with sufficient confidence. Please provide more specific details.',
-                'matches': [],
-                'analysis': {
-                    'detected_symptoms': symptoms,
-                    'total_codes_analyzed': len(self.obd_codes),
-                    'tfidf_matches': len(tfidf_results),
-                    'fuzzy_matches': len(fuzzy_results),
-                    'user_input_processed': self._preprocess_text(user_input),
-                    'threshold_not_met': True
-                }
-            }
-        
-        # Prepare final results
-        matches = []
-        for code_id, combined_score in ranked_results[:top_n]:
-            code_data = self._find_code_by_id(code_id)
+        # Process TF-IDF results
+        for result in tfidf_results[:15]:  # Process more results for better confidence assessment
+            code_data = self._find_code_by_id(result['code_id'])
             if code_data:
-                matches.append({
-                    'code_id': code_id,
-                    'description': code_data.get('description', ''),
-                    'common_causes': code_data.get('common_causes', []),
-                    'priority': code_data.get('priority', 'Unknown'),
-                    'confirmation': code_data.get('confirmation', ''),
-                    'confidence_score': round(combined_score, 3)  # Already capped at 1.0
+                confidence, confidence_details = self._calculate_enhanced_confidence(
+                    user_input, code_data, 
+                    tfidf_score=result['similarity'],
+                    symptoms_matched=symptoms
+                )
+                
+                enhanced_matches.append({
+                    'code_id': result['code_id'],
+                    'code_data': code_data,
+                    'confidence': confidence,
+                    'confidence_details': confidence_details,
+                    'source': 'tfidf'
                 })
         
+        # Process fuzzy results and merge/add
+        processed_codes = {match['code_id']: match for match in enhanced_matches}
+        
+        for result in fuzzy_results[:15]:
+            code_id = result['code_id']
+            code_data = self._find_code_by_id(code_id)
+            
+            if code_data:
+                if code_id in processed_codes:
+                    # Recalculate with both scores
+                    existing_match = processed_codes[code_id]
+                    tfidf_score = next((r['similarity'] for r in tfidf_results if r['code_id'] == code_id), 0)
+                    
+                    confidence, confidence_details = self._calculate_enhanced_confidence(
+                        user_input, code_data,
+                        tfidf_score=tfidf_score,
+                        fuzzy_score=result['similarity'],
+                        symptoms_matched=symptoms
+                    )
+                    
+                    processed_codes[code_id].update({
+                        'confidence': confidence,
+                        'confidence_details': confidence_details,
+                        'source': 'tfidf+fuzzy'
+                    })
+                else:
+                    # New match from fuzzy only
+                    confidence, confidence_details = self._calculate_enhanced_confidence(
+                        user_input, code_data,
+                        fuzzy_score=result['similarity'],
+                        symptoms_matched=symptoms
+                    )
+                    
+                    processed_codes[code_id] = {
+                        'code_id': code_id,
+                        'code_data': code_data,
+                        'confidence': confidence,
+                        'confidence_details': confidence_details,
+                        'source': 'fuzzy'
+                    }
+        
+        # Sort by confidence and filter minimum threshold
+        sorted_matches = sorted(processed_codes.values(), key=lambda x: x['confidence'], reverse=True)
+        filtered_matches = [match for match in sorted_matches if match['confidence'] >= 20.0]  # 20% minimum
+        
+        # Determine routing based on confidence threshold
+        high_confidence_matches = [match for match in filtered_matches if match['confidence'] >= confidence_threshold]
+        max_confidence = max([match['confidence'] for match in filtered_matches], default=0)
+        
+        # Routing decision logic
+        if high_confidence_matches:
+            routing_decision = 'NLP_TO_LLM'  # Pass codes to LLM for detailed explanation
+            route_to_llm_only = False
+        else:
+            routing_decision = 'LLM_ONLY'    # Skip codes, go directly to LLM
+            route_to_llm_only = True
+        
+        # Prepare final matches for output
+        final_matches = []
+        matches_to_process = filtered_matches[:top_n]
+        
+        for match in matches_to_process:
+            code_data = match['code_data']
+            final_matches.append({
+                'code_id': code_data['id'],
+                'description': code_data['description'],
+                'common_causes': code_data.get('common_causes', []),
+                'priority': code_data.get('priority', 'Medium'),
+                'confidence_score': match['confidence'] / 100.0,  # 0-1 scale for compatibility
+                'confidence_percentage': f"{match['confidence']:.1f}%",
+                'confidence_breakdown': match['confidence_details'],
+                'confirmation': code_data.get('likely_cause', ''),
+                'source_method': match['source']
+            })
+        
+        # Create comprehensive response
         return {
-            'matches': matches,
+            'success': True,
+            'route_to_llm_only': route_to_llm_only,
+            'routing_decision': routing_decision,
+            'diagnostic_relevance': relevance_score,
+            'relevance_classification': relevance_class,
+            'max_confidence': max_confidence,
+            'high_confidence_count': len(high_confidence_matches),
+            'confidence_threshold': confidence_threshold,
+            'message': self._generate_response_message(final_matches, routing_decision, max_confidence),
+            'matches': final_matches,
             'analysis': {
                 'detected_symptoms': symptoms,
                 'total_codes_analyzed': len(self.obd_codes),
                 'tfidf_matches': len(tfidf_results),
                 'fuzzy_matches': len(fuzzy_results),
-                'user_input_processed': self._preprocess_text(user_input),
-                'validation_passed': True
+                'enhanced_matches': len(filtered_matches),
+                'high_confidence_matches': len(high_confidence_matches),
+                'diagnostic_relevance_score': relevance_score,
+                'relevance_classification': relevance_class,
+                'routing_decision': routing_decision,
+                'confidence_threshold': confidence_threshold,
+                'user_input_processed': self._preprocess_text(user_input)
             }
         }
+    
+    def _generate_response_message(self, matches, routing_decision, max_confidence):
+        """Generate appropriate response message based on results"""
+        if not matches:
+            return "No diagnostic codes found - consulting general automotive knowledge"
+        
+        count = len(matches)
+        confidence_note = f"(highest confidence: {max_confidence:.1f}%)"
+        
+        if routing_decision == 'NLP_TO_LLM':
+            if count == 1:
+                return f"Found 1 high-confidence diagnostic code {confidence_note} - analyzing with AI"
+            else:
+                return f"Found {count} potential diagnostic codes {confidence_note} - analyzing with AI"
+        else:
+            if count == 1:
+                return f"Found 1 low-confidence diagnostic code {confidence_note} - providing general guidance"
+            else:
+                return f"Found {count} low-confidence diagnostic codes {confidence_note} - providing general guidance"
     
     def get_code_details(self, code_id):
         """Get detailed information about a specific OBD code"""
