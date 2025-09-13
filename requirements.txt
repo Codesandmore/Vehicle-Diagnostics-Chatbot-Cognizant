@@ -1,21 +1,21 @@
 # Web Framework
-Flask==3.0.3
+Flask
 
 # AI/ML Libraries
-google-generativeai==0.8.5
-nltk==3.9.1
-scikit-learn==1.5.2
-numpy==1.26.4   # ✅ last version supporting Python 3.10
+google-generativeai
+nltk
+scikit-learn
+numpy   # ✅ last version supporting Python 3.10
 
 # String Processing
-fuzzywuzzy==0.18.0
-python-Levenshtein==0.25.1
+fuzzywuzzy
+python-Levenshtein
 
 # Image Processing
-Pillow==10.4.0
+Pillow
 
 # Configuration
-python-dotenv==1.0.1
+python-dotenv
 
 # Utilities
-requests==2.32.3
+requests
