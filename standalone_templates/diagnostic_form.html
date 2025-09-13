@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Engine Diagnostics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='diagnostic_style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 Vehicle Engine Diagnostics System</h1>
+            <p>Enter engine sensor readings to detect potential anomalies</p>
+        </header>
+
+        <div class="diagnostic-form">
+            <form id="diagnosticForm">
+                <div class="form-grid">
+                    <!-- Vibration Measurements -->
+                    <div class="form-section">
+                        <h3>🔧 Vibration Measurements</h3>
+                        <div class="input-group">
+                            <label for="vibration_amplitude">Vibration Amplitude</label>
+                            <input type="number" id="vibration_amplitude" step="0.01" placeholder="e.g., 0.45" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="rms_vibration">RMS Vibration</label>
+                            <input type="number" id="rms_vibration" step="0.01" placeholder="e.g., 0.12" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="vibration_frequency">Vibration Frequency</label>
+                            <input type="number" id="vibration_frequency" step="0.1" placeholder="e.g., 300.0" required>
+                            <span class="unit">Hz</span>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Measurements -->
+                    <div class="form-section">
+                        <h3>🌡️ Temperature Measurements</h3>
+                        <div class="input-group">
+                            <label for="surface_temperature">Surface Temperature</label>
+                            <input type="number" id="surface_temperature" step="0.1" placeholder="e.g., 85.0" required>
+                            <span class="unit">°C</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="exhaust_temperature">Exhaust Temperature</label>
+                            <input type="number" id="exhaust_temperature" step="0.1" placeholder="e.g., 450.0" required>
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Acoustic Measurements -->
+                    <div class="form-section">
+                        <h3>🔊 Acoustic Measurements</h3>
+                        <div class="input-group">
+                            <label for="acoustic_db">Acoustic Level</label>
+                            <input type="number" id="acoustic_db" step="0.1" placeholder="e.g., 72.0" required>
+                            <span class="unit">dB</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="acoustic_frequency">Acoustic Frequency</label>
+                            <input type="number" id="acoustic_frequency" step="0.1" placeholder="e.g., 1000.0" required>
+                            <span class="unit">Hz</span>
+                        </div>
+                    </div>
+
+                    <!-- Pressure Measurements -->
+                    <div class="form-section">
+                        <h3>💨 Pressure Measurements</h3>
+                        <div class="input-group">
+                            <label for="intake_pressure">Intake Pressure</label>
+                            <input type="number" id="intake_pressure" step="0.01" placeholder="e.g., 1.2" required>
+                            <span class="unit">bar</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="exhaust_pressure">Exhaust Pressure</label>
+                            <input type="number" id="exhaust_pressure" step="0.01" placeholder="e.g., 1.0" required>
+                            <span class="unit">bar</span>
+                        </div>
+                    </div>
+
+                    <!-- Additional Measurements -->
+                    <div class="form-section">
+                        <h3>📊 Additional Measurements</h3>
+                        <div class="input-group">
+                            <label for="frequency_band_energy">Frequency Band Energy</label>
+                            <input type="number" id="frequency_band_energy" step="0.1" placeholder="e.g., 55.0" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="amplitude_mean">Amplitude Mean</label>
+                            <input type="number" id="amplitude_mean" step="0.01" placeholder="e.g., 0.3" required>
+                            <span class="unit">units</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" id="analyzeBtn">🔍 Analyze Engine</button>
+                    <button type="button" id="clearBtn">🗑️ Clear All</button>
+                    <button type="button" id="sampleBtn">📝 Load Sample Data</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loadingIndicator" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing engine data...</p>
+        </div>
+
+        <div id="results" class="results hidden">
+            <h2>🔍 Diagnostic Results</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='diagnostic_script.js') }}"></script>
+</body>
+</html>
