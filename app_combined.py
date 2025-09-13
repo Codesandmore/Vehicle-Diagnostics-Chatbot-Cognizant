@@ -1,12 +1,39 @@
 import os
 import base64
+import logging  # Add this missing import
 import google.generativeai as genai
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
+from speech.speech_handler import transcribe_audio_file, get_speech_status
+from speech.speech_utils import AudioValidator, AudioProcessor
+import tempfile
 # from PIL import Image
 # import io
 # import json
+
+# Ensure FFmpeg is accessible (add this function)
+def ensure_ffmpeg_path():
+    """Ensure FFmpeg is accessible by adding common installation paths"""
+    ffmpeg_paths = [
+        r'C:\ffmpeg\bin',
+        r'C:\Program Files\ffmpeg\bin', 
+        r'C:\ProgramData\chocolatey\bin',
+        r'C:\tools\ffmpeg\bin'
+    ]
+    
+    for path in ffmpeg_paths:
+        if os.path.exists(path):
+            if path not in os.environ['PATH']:
+                os.environ['PATH'] = path + os.pathsep + os.environ['PATH']
+                print(f"✅ Added FFmpeg path to environment: {path}")
+            return True
+    
+    print("❌ FFmpeg not found in common installation paths")
+    return False
+
+# Call FFmpeg path setup early
+ensure_ffmpeg_path()
 
 # Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
@@ -260,7 +287,7 @@ def diagnose():
     try:
         data = request.get_json()
         user_input = data.get("message", "").strip()
-        confidence_threshold = data.get("confidence_threshold", 90.0)
+        confidence_threshold = data.get("confidence_threshold", 70.0)
         
         if not user_input:
             return jsonify({

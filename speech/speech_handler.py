@@ -4,9 +4,33 @@ Handles server-side speech-to-text conversion
 """
 
 import os
+import sys
 import logging
 from typing import Optional, Dict, Any
 from .speech_utils import AudioValidator, AudioProcessor, sanitize_transcript
+
+# Ensure FFmpeg is in PATH (add at the top of the file)
+def ensure_ffmpeg_path():
+    """Ensure FFmpeg is accessible by adding common installation paths"""
+    ffmpeg_paths = [
+        r'C:\ffmpeg\bin',
+        r'C:\Program Files\ffmpeg\bin', 
+        r'C:\ProgramData\chocolatey\bin',
+        r'C:\tools\ffmpeg\bin'
+    ]
+    
+    for path in ffmpeg_paths:
+        if os.path.exists(path):
+            if path not in os.environ['PATH']:
+                os.environ['PATH'] = path + os.pathsep + os.environ['PATH']
+                print(f"✅ Added FFmpeg path to environment: {path}")
+            return True
+    
+    print("❌ FFmpeg not found in common installation paths")
+    return False
+
+# Call this at module import
+ensure_ffmpeg_path()
 
 # Configure logging
 logger = logging.getLogger(__name__)
