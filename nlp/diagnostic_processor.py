@@ -806,7 +806,7 @@ class DiagnosticProcessor:
         
         return sorted(ranked_results, key=lambda x: x[1], reverse=True)
     
-    def process_user_input(self, user_input, top_n=5, confidence_threshold=90.0):
+    def process_user_input(self, user_input, top_n=5, confidence_threshold=50.0):
         """
         Enhanced processing with 90% confidence threshold for intelligent LLM routing
         
