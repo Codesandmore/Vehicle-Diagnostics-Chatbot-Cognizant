@@ -1,12 +1,65 @@
 import os
 import base64
+import logging  # Add this missing import
 import google.generativeai as genai
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_session import Session
 from dotenv import load_dotenv
 from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
+from speech.speech_handler import transcribe_audio_file, get_speech_status
+from speech.speech_utils import AudioValidator, AudioProcessor
+from youtube.youtube_handler import search_diagnostic_videos, search_manual_videos
+from youtube.youtube_config import is_youtube_available, validate_youtube_setup
+import tempfile
+import math
+import pyrebase
+from functools import wraps
+from firebase_config import FIREBASE_CONFIG
 # from PIL import Image
 # import io
 # import json
+
+# Ensure FFmpeg is accessible (add this function)
+def ensure_ffmpeg_path():
+    """Ensure FFmpeg is accessible by adding common installation paths"""
+    ffmpeg_paths = [
+        r'C:\ffmpeg\bin',
+        r'C:\Program Files\ffmpeg\bin', 
+        r'C:\ProgramData\chocolatey\bin',
+        r'C:\tools\ffmpeg\bin'
+    ]
+    
+    for path in ffmpeg_paths:
+        if os.path.exists(path):
+            if path not in os.environ['PATH']:
+                os.environ['PATH'] = path + os.pathsep + os.environ['PATH']
+                print(f"✅ Added FFmpeg path to environment: {path}")
+            return True
+    
+    print("❌ FFmpeg not found in common installation paths")
+    return False
+
+# Call FFmpeg path setup early
+ensure_ffmpeg_path()
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize Firebase
+try:
+    firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
+    auth = firebase.auth()
+    print("✅ Firebase authentication initialized successfully")
+    firebase_available = True
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    print("💡 Please check your firebase_config.py file")
+    auth = None
+    firebase_available = False
+
+# Configure logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +75,12 @@ else:
 
 app = Flask(__name__)
 
+# Configure Flask session for authentication
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this')
+app.config['SESSION_PERMANENT'] = False
+Session(app)
+
 # Initialize the enhanced diagnostic processor for NLP functionality
 try:
     obd_codes_path = os.path.join(os.path.dirname(__file__), 'data', 'obd_codes.json')
@@ -33,11 +92,245 @@ except Exception as e:
     diagnostic_processor = None
     nlp_available = False
 
+# ML Diagnostics Configuration
+FEATURES = [
+    "Vibration_Amplitude",
+    "RMS_Vibration", 
+    "Vibration_Frequency",
+    "Surface_Temperature",
+    "Exhaust_Temperature",
+    "Acoustic_dB",
+    "Acoustic_Frequency",
+    "Intake_Pressure",
+    "Exhaust_Pressure",
+    "Frequency_Band_Energy",
+    "Amplitude_Mean"
+]
+
+# Normal operating ranges for rule-based detection
+NORMAL_RANGES = {
+    "Vibration_Amplitude": (0.1, 0.8),
+    "RMS_Vibration": (0.05, 0.25),
+    "Vibration_Frequency": (100, 500),
+    "Surface_Temperature": (60, 120),
+    "Exhaust_Temperature": (200, 600),
+    "Acoustic_dB": (50, 85),
+    "Acoustic_Frequency": (500, 2000),
+    "Intake_Pressure": (0.8, 2.0),
+    "Exhaust_Pressure": (0.5, 1.5),
+    "Frequency_Band_Energy": (20, 80),
+    "Amplitude_Mean": (0.1, 0.6)
+}
+
+def predict_anomaly_rule_based(input_data):
+    """Rule-based anomaly detection for demo purposes"""
+    try:
+        anomalies = []
+        scores = []
+        
+        for feature in FEATURES:
+            if feature not in input_data:
+                return {"error": f"Missing feature: {feature}"}
+            
+            value = float(input_data[feature])
+            min_val, max_val = NORMAL_RANGES[feature]
+            
+            # Calculate how far outside normal range
+            if value < min_val:
+                deviation = (min_val - value) / min_val
+                anomalies.append(f"{feature} too low ({value:.2f} < {min_val})")
+                scores.append(deviation)
+            elif value > max_val:
+                deviation = (value - max_val) / max_val
+                anomalies.append(f"{feature} too high ({value:.2f} > {max_val})")
+                scores.append(deviation)
+            else:
+                # Within normal range
+                scores.append(0)
+        
+        # Calculate overall anomaly score
+        max_deviation = max(scores) if scores else 0
+        avg_deviation = sum(scores) / len(scores) if scores else 0
+        
+        # Determine if anomalous
+        is_anomaly = len(anomalies) > 0 or max_deviation > 0.2
+        anomaly_score = max_deviation + (avg_deviation * 0.3)
+        
+        # Determine status and risk
+        if is_anomaly:
+            if max_deviation > 0.5:
+                risk_level = "HIGH"
+                status = "CRITICAL ANOMALY DETECTED"
+            elif max_deviation > 0.3:
+                risk_level = "MEDIUM"
+                status = "ANOMALY DETECTED"
+            else:
+                risk_level = "LOW"
+                status = "MINOR ANOMALY DETECTED"
+        else:
+            risk_level = "LOW"
+            status = "NORMAL"
+        
+        return {
+            "status": status,
+            "is_anomaly": is_anomaly,
+            "anomaly_score": round(anomaly_score, 4),
+            "confidence": round(max_deviation, 4),
+            "risk_level": risk_level,
+            "anomalies_detected": anomalies[:3],  # Show top 3 issues
+            "total_anomalies": len(anomalies)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+# Authentication helper functions
+def login_required(f):
+    """Decorator to require login for protected routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not firebase_available:
+            flash('Authentication system is currently unavailable', 'error')
+            return redirect(url_for('login'))
+        
+        if 'user' not in session:
+            flash('Please log in to access this page', 'warning')
+            return redirect(url_for('login'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    """Get current logged-in user from session"""
+    return session.get('user', None)
+
+# Authentication routes
+@app.route("/login")
+def login():
+    """Display login page"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return render_template("login.html", firebase_available=firebase_available)
+
+@app.route("/register")
+def register():
+    """Display registration page"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return render_template("register.html", firebase_available=firebase_available)
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    """Main dashboard - protected route"""
+    user = get_current_user()
+    return render_template("index_simple.html", user=user, firebase_available=firebase_available)
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    """Handle login form submission"""
+    if not firebase_available:
+        return jsonify({"success": False, "message": "Authentication system unavailable"})
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required"})
+        
+        # Authenticate with Firebase
+        user = auth.sign_in_with_email_and_password(email, password)
+        
+        # Store user info in session
+        session['user'] = {
+            'uid': user['localId'],
+            'email': email,
+            'token': user['idToken']
+        }
+        
+        return jsonify({"success": True, "message": "Login successful", "redirect": url_for('dashboard')})
+        
+    except Exception as e:
+        error_message = str(e)
+        if "INVALID_EMAIL" in error_message:
+            return jsonify({"success": False, "message": "Invalid email format"})
+        elif "EMAIL_NOT_FOUND" in error_message:
+            return jsonify({"success": False, "message": "Email not found"})
+        elif "INVALID_PASSWORD" in error_message:
+            return jsonify({"success": False, "message": "Invalid password"})
+        else:
+            return jsonify({"success": False, "message": "Login failed. Please try again."})
+
+@app.route("/auth/register", methods=["POST"])
+def auth_register():
+    """Handle registration form submission"""
+    if not firebase_available:
+        return jsonify({"success": False, "message": "Authentication system unavailable"})
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        first_name = data.get('firstName', '')
+        last_name = data.get('lastName', '')
+        organization = data.get('organization', '')
+        
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required"})
+        
+        if len(password) < 6:
+            return jsonify({"success": False, "message": "Password must be at least 6 characters"})
+        
+        # Create user with Firebase
+        user = auth.create_user_with_email_and_password(email, password)
+        
+        # Store user info in session
+        session['user'] = {
+            'uid': user['localId'],
+            'email': email,
+            'firstName': first_name,
+            'lastName': last_name,
+            'organization': organization,
+            'token': user['idToken']
+        }
+        
+        return jsonify({"success": True, "message": "Registration successful", "redirect": url_for('dashboard')})
+        
+    except Exception as e:
+        error_message = str(e)
+        if "EMAIL_EXISTS" in error_message:
+            return jsonify({"success": False, "message": "Email already exists"})
+        elif "INVALID_EMAIL" in error_message:
+            return jsonify({"success": False, "message": "Invalid email format"})
+        elif "WEAK_PASSWORD" in error_message:
+            return jsonify({"success": False, "message": "Password is too weak"})
+        else:
+            return jsonify({"success": False, "message": "Registration failed. Please try again."})
+
+@app.route("/auth/logout", methods=["GET", "POST"])
+def auth_logout():
+    """Handle user logout"""
+    session.pop('user', None)
+    
+    # Handle AJAX requests
+    if request.method == "POST":
+        return jsonify({"success": True, "message": "Logged out successfully", "redirect": url_for('login')})
+    
+    # Handle direct GET requests
+    flash('You have been logged out successfully', 'success')
+    return redirect(url_for('login'))
+
 @app.route("/")
 def index():
-    return render_template("index_simple.html")
+    """Redirect to login or dashboard based on authentication"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route("/send_message", methods=["POST"])
+@login_required
 def send_message():
     """
     Enhanced chatbot endpoint with intelligent routing:
@@ -169,8 +462,54 @@ def send_message():
             print(f"❌ Gemini API error: {e}")
             final_response = f"Sorry, I encountered an error while processing your request with Gemini AI: {str(e)}"
         
-        # Step 5: Return response for chatbot display
-        return jsonify({"reply": final_response})
+        # Step 4: Search for related YouTube videos (if OBD codes found)
+        video_results = None
+        if is_youtube_available():
+            try:
+                # Extract OBD codes and symptoms for video search
+                obd_codes = []
+                symptoms = []
+                
+                if nlp_results and nlp_results.get('matches'):
+                    # Get high-confidence OBD codes
+                    for match in nlp_results.get('matches', []):
+                        confidence = match.get('confidence_score', 0)
+                        if isinstance(confidence, str) and '%' in confidence:
+                            confidence = float(confidence.strip('%'))
+                        
+                        if confidence >= 70:  # Only high-confidence codes
+                            obd_codes.append(match.get('code_id', ''))
+                
+                # Get detected symptoms
+                analysis = nlp_results.get('analysis', {})
+                symptoms = analysis.get('detected_symptoms', [])
+                
+                # Search for videos if we have relevant data
+                if obd_codes or symptoms:
+                    print(f"🎥 Searching YouTube videos for codes: {obd_codes}, symptoms: {symptoms}")
+                    video_results = search_diagnostic_videos(
+                        obd_codes=obd_codes,
+                        symptoms=symptoms,
+                        user_prompt=user_message,
+                        max_results=3
+                    )
+                    
+                    if video_results and video_results.get('has_videos'):
+                        print(f"✅ Found {video_results['count']} relevant videos")
+                    else:
+                        print("ℹ️ No relevant videos found")
+                        
+            except Exception as video_error:
+                print(f"⚠️ YouTube video search error: {video_error}")
+                video_results = None
+        
+        # Step 5: Build complete response with videos
+        response_data = {"reply": final_response}
+        
+        if video_results and video_results.get('has_videos'):
+            response_data["videos"] = video_results
+        
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"❌ General error in send_message: {e}")
@@ -251,12 +590,13 @@ def _generate_routing_info(routing_decision, confidence_info):
         return "🤖 *General automotive consultation*"
 
 @app.route("/diagnose", methods=["POST"])
+@login_required
 def diagnose():
     """Enhanced NLP diagnosis endpoint with routing information"""
     try:
         data = request.get_json()
         user_input = data.get("message", "").strip()
-        confidence_threshold = data.get("confidence_threshold", 90.0)
+        confidence_threshold = data.get("confidence_threshold", 50.0)
         
         if not user_input:
             return jsonify({
@@ -341,15 +681,167 @@ def diagnose():
             "routing_decision": "LLM_ONLY"
         })
 
+@app.route("/transcribe_audio", methods=["POST"])
+def transcribe_audio():
+    """Speech-to-text endpoint using OpenAI Whisper"""
+    try:
+        if 'audio' not in request.files:
+            return jsonify({
+                "error": "No audio file provided", 
+                "success": False
+            }), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({
+                "error": "No audio file selected", 
+                "success": False
+            }), 400
+        
+        # Validate audio file
+        validator = AudioValidator()
+        is_valid, validation_error = validator.validate_file(audio_file)
+        
+        if not is_valid:
+            return jsonify({
+                "error": f"Invalid audio file: {validation_error}", 
+                "success": False
+            }), 400
+        
+        # Save temporary file for processing
+        processor = AudioProcessor()
+        temp_path = None
+        
+        try:
+            temp_path = processor.save_temp_file(audio_file)
+            
+            # Transcribe using Whisper
+            result = transcribe_audio_file(temp_path)
+            
+            if result['success']:
+                logger.info(f"Successfully transcribed audio: {result['text'][:50]}...")
+                return jsonify({
+                    "success": True,
+                    "text": result['text'],
+                    "confidence": result.get('confidence', 0.0),
+                    "duration": result.get('duration', 0.0)
+                })
+            else:
+                logger.error(f"Transcription failed: {result['error']}")
+                return jsonify({
+                    "error": result['error'], 
+                    "success": False
+                }), 500
+                
+        finally:
+            # Clean up temporary file
+            if temp_path:
+                processor.cleanup_temp_file(temp_path)
+                
+    except Exception as e:
+        logger.error(f"Error in transcribe_audio endpoint: {e}")
+        return jsonify({
+            "error": f"An error occurred during transcription: {str(e)}",
+            "success": False
+        }), 500
+
+@app.route("/speech_status", methods=["GET"])
+def speech_status():
+    """Check speech recognition system status"""
+    try:
+        status = get_speech_status()
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Error getting speech status: {e}")
+        return jsonify({
+            "error": f"Failed to get speech status: {str(e)}",
+            "success": False,
+            "whisper_available": False
+        }), 500
+
+@app.route("/search_youtube", methods=["POST"])
+def search_youtube():
+    """Manual YouTube video search endpoint"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        
+        if not query:
+            return jsonify({"error": "Query parameter is required"}), 400
+            
+        if not is_youtube_available():
+            return jsonify({"error": "YouTube search is not available"}), 503
+        
+        # Perform manual search
+        video_results = search_manual_videos(query, max_results=5)
+        
+        if video_results and video_results.get('has_videos'):
+            return jsonify({
+                "success": True,
+                "videos": video_results
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No videos found for your search query"
+            })
+            
+    except Exception as e:
+        print(f"❌ YouTube search error: {e}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
+
+@app.route("/youtube_status", methods=["GET"])
+def youtube_status():
+    """Check YouTube search availability"""
+    return jsonify({
+        "available": is_youtube_available(),
+        "message": "YouTube search is ready" if is_youtube_available() else "YouTube API not configured"
+    })
+
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint to verify system status"""
     return jsonify({
         "nlp_available": nlp_available,
         "llm_available": llm_available,
+        "youtube_available": is_youtube_available(),
         "status": "healthy" if (nlp_available and llm_available) else "degraded",
         "diagnostic_processor": "available" if diagnostic_processor else "unavailable",
         "gemini_api": "configured" if llm_available else "not configured"
+    })
+
+@app.route("/ml-diagnostics")
+def ml_diagnostics():
+    """ML Diagnostics page for vehicle engine anomaly detection"""
+    return render_template("ml_diagnostics.html")
+
+@app.route("/api/ml-diagnose", methods=["POST"])
+def ml_diagnose():
+    """API endpoint for ML-based vehicle diagnostics"""
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Predict anomaly using rule-based system
+        result = predict_anomaly_rule_based(data)
+        
+        if "error" in result:
+            return jsonify(result), 400
+            
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/ml-ranges", methods=["GET"])
+def get_ml_normal_ranges():
+    """Get normal operating ranges for ML diagnostics reference"""
+    return jsonify({
+        "normal_ranges": NORMAL_RANGES,
+        "features": FEATURES
     })
 
 if __name__ == "__main__":
