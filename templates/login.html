@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Vehicle Diagnostics AI</title>
+    <title>Login - Doc Hudson</title>
     <style>
         * {
             margin: 0;
@@ -11,40 +11,75 @@
             box-sizing: border-box;
         }
 
+        /* CSS Variables for Light/Dark Mode */
+        :root {
+            --bg-color: white;
+            --text-color: rgb(0, 0, 72);
+            --container-bg: white;
+            --border-color: #e1e5e9;
+            --input-bg: white;
+            --input-text: #333;
+            --input-border: #e1e5e9;
+            --placeholder-color: #999;
+            --accent-color: #007bff;
+            --accent-hover: #0056b3;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --user-info-color: rgb(0,0,72);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --border-color: #555;
+            --input-bg: #404040;
+            --input-text: #e0e0e0;
+            --input-border: #555;
+            --placeholder-color: #aaa;
+            --accent-color: #4a9eff;
+            --accent-hover: #3d8bdb;
+            --shadow-light: rgba(0, 0, 0, 0.3);
+            --user-info-color: white;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-color);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: var(--text-color);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .auth-container {
-            background: white;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 40px var(--shadow-light);
             width: 100%;
             max-width: 400px;
             text-align: center;
+            transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         .logo {
             font-size: 3rem;
             margin-bottom: 10px;
+            color: var(--text-color);
         }
 
         .title {
             font-size: 2rem;
-            color: #667eea;
+            color: var(--accent-color);
             margin-bottom: 10px;
             font-weight: 600;
         }
 
         .subtitle {
-            color: #666;
+            color: var(--placeholder-color);
             margin-bottom: 30px;
             font-size: 1rem;
         }
@@ -58,28 +93,34 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
+            color: var(--text-color);
         }
 
         .form-group input {
             width: 100%;
             padding: 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--input-text);
             border-radius: 10px;
             font-size: 16px;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+        }
+
+        .form-group input::placeholder {
+            color: var(--placeholder-color);
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
         }
 
         .btn {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: var(--accent-color);
             color: white;
             border: none;
             border-radius: 10px;
@@ -91,8 +132,9 @@
         }
 
         .btn:hover {
+            background: var(--accent-hover);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
         }
 
         .btn:disabled {
@@ -103,7 +145,7 @@
         }
 
         .link-text {
-            color: #667eea;
+            color: var(--accent-color);
             text-decoration: none;
             font-weight: 600;
         }
@@ -181,11 +223,35 @@
                 padding: 30px 20px;
             }
         }
+
+        /* Dark mode toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--container-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px var(--shadow-light);
+        }
     </style>
 </head>
 <body>
+    <!-- Dark mode toggle -->
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <span id="themeIcon">🌙</span>
+    </div>
     <div class="auth-container">
-        <div class="logo">🚗</div>
+        <div class="logo"></div>
         <h1 class="title">Vehicle Diagnostics AI</h1>
         <p class="subtitle">Sign in to access advanced diagnostic tools</p>
 
@@ -218,7 +284,7 @@
             </div>
 
             <button type="submit" class="btn" id="loginBtn">
-                🔐 Sign In
+                 Sign In
             </button>
         </form>
 
@@ -227,15 +293,6 @@
             <a href="{{ url_for('register') }}" class="link-text">Create one here</a>
         </p>
 
-        {% if firebase_available %}
-            <div class="system-status status-available">
-                ✅ Authentication system is online
-            </div>
-        {% else %}
-            <div class="system-status status-unavailable">
-                ❌ Authentication system is currently unavailable
-            </div>
-        {% endif %}
     </div>
 
     <script>
@@ -285,7 +342,7 @@
             } finally {
                 // Reset button state
                 loginBtn.disabled = false;
-                loginBtn.textContent = '🔐 Sign In';
+                loginBtn.textContent = 'Sign In';
                 loading.style.display = 'none';
             }
         }
@@ -302,9 +359,33 @@
             messageDiv.style.display = 'none';
         }
 
-        // Focus on email field when page loads
+        // Dark mode toggle functionality
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update theme icon
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Initialize theme on page load
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            // Update theme icon
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Focus on email field when page loads and initialize theme
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('email').focus();
+            initializeTheme();
         });
     </script>
 </body>
