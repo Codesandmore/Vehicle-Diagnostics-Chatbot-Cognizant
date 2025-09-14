@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vehicle Diagnostics Chatbot</title>
+    <title>Doc Hudson</title>
     <style>
       * {
         margin: 0;
@@ -11,17 +11,71 @@
         box-sizing: border-box;
       }
 
+      /* CSS Variables for Light/Dark Mode */
+      :root {
+        --bg-color: white;
+        --text-color: rgb(0, 0, 72);
+        --container-bg: white;
+        --border-color: #e1e5e9;
+        --input-bg: white;
+        --input-text: #333;
+        --input-border: #e1e5e9;
+        --placeholder-color: #999;
+        --sidebar-bg: #f8f9fa;
+        --sidebar-text: #333;
+        --sidebar-hover: rgba(0, 0, 72, 0.1);
+        --chat-bg: #f8f9fa;
+        --examples-bg: #f8f9fa;
+        --message-bg: white;
+        --user-message-bg: #007bff;
+        --bot-message-bg: white;
+        --bot-message-text: #333;
+        --scrollbar-thumb: #c1c1c1;
+        --scrollbar-track: #f1f1f1;
+        --user-info-color: rgb(0,0,72);
+        --user-info-bg: transparent;
+        --voice-btn-bg: rgb(0, 0, 72);
+      }
+
+      [data-theme="dark"] {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --container-bg: #2d2d2d;
+        --border-color: #555;
+        --input-bg: #404040;
+        --input-text: #e0e0e0;
+        --input-border: #555;
+        --placeholder-color: #aaa;
+        --sidebar-bg: #252525;
+        --sidebar-text: white;
+        --sidebar-hover: rgba(255, 255, 255, 0.1);
+        --chat-bg: #333;
+        --examples-bg: #2a2a2a;
+        --message-bg: #404040;
+        --user-message-bg: #0056b3;
+        --bot-message-bg: #404040;
+        --bot-message-text: #e0e0e0;
+        --scrollbar-thumb: #555;
+        --scrollbar-track: #333;
+        --user-info-color: white;
+        --user-info-bg: rgba(255, 255, 255, 0.1);
+        --voice-btn-bg: #007bff;
+      }
+
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: white;
+        background: var(--bg-color);
+        color: var(--text-color);
         min-height: 100vh;
-        padding: 20px;
+        padding: 30px; /* Increased padding for better spacing */
+        transition: background 0.3s ease, color 0.3s ease;
       }
 
       .header {
         text-align: center;
-        color: rgb(0, 0, 72); /* Navy blue font color */
-        margin-bottom: 30px;
+        color: var(--text-color);
+        margin-bottom: 40px; /* Increased margin for better spacing */
+        transition: color 0.3s ease;
       }
 
       .header h1 {
@@ -87,23 +141,27 @@
 
       .user-info {
         font-weight: 600;
-        color: rgb(0,0,72);
+        color: var(--user-info-color);
+        background: var(--user-info-bg);
+        padding: 8px 12px;
+        border-radius: 20px;
+        transition: all 0.3s ease;
       }
 
       .main-container {
-        max-width: 900px;
-        margin: 0 auto;
-        background: white;
+        max-width: 1200px; /* Significantly increased width */
+        margin: 0 auto; /* Centralized */
+        background: var(--container-bg);
         border-radius: 20px;
         overflow: hidden;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        margin-left: 250px; /* Shifted to the right for sidebar */
+        transition: background 0.3s ease;
       }
 
       .chat-container {
         display: flex;
         flex-direction: column;
-        height: 600px;
+        height: 700px; /* Significantly increased height */
       }
 
       .chat-header {
@@ -116,9 +174,10 @@
       }
 
       .examples-section {
-        background: #f8f9fa;
+        background: var(--examples-bg);
         padding: 15px 20px;
-        border-bottom: 1px solid #e1e5e9;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.3s ease;
       }
 
       .examples-title {
@@ -159,7 +218,8 @@
         flex: 1;
         overflow-y: auto;
         padding: 20px;
-        background: #f8f9fa;
+        background: var(--chat-bg);
+        transition: background 0.3s ease;
       }
 
       .message {
@@ -185,10 +245,11 @@
       }
 
       .message.bot .message-content {
-        background: white;
-        color: #333;
-        border: 1px solid #e1e5e9;
+        background: var(--bot-message-bg);
+        color: var(--bot-message-text);
+        border: 1px solid var(--border-color);
         border-bottom-left-radius: 4px;
+        transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
       }
 
       .loading {
@@ -219,9 +280,10 @@
       }
 
       .input-section {
-        background: white;
+        background: var(--container-bg);
         padding: 20px;
-        border-top: 1px solid #e1e5e9;
+        border-top: 1px solid var(--border-color);
+        transition: background 0.3s ease, border-color 0.3s ease;
       }
 
       .input-container {
@@ -238,18 +300,57 @@
       #user-input {
         width: 100%;
         padding: 12px 16px;
-        border: 2px solid #e1e5e9;
+        border: 2px solid var(--input-border);
         border-radius: 25px;
         font-size: 1em;
         resize: none;
         min-height: 50px;
         max-height: 120px;
-        transition: border-color 0.3s ease;
+        background: var(--input-bg);
+        color: var(--input-text);
+        transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
       }
 
       #user-input:focus {
         outline: none;
         border-color: #007bff;
+      }
+
+      #user-input::placeholder {
+        color: var(--placeholder-color);
+        transition: color 0.3s ease;
+      }
+
+      /* Custom Scrollbars for Dark Mode */
+      .chat-messages::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .chat-messages::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+        border-radius: 4px;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 4px;
+        transition: background 0.3s ease;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: #999;
+      }
+
+      /* Settings Panel Styling */
+      #settingsPanel {
+        background: var(--sidebar-bg);
+        border-top: 1px solid var(--border-color) !important;
+        transition: all 0.3s ease;
+      }
+
+      #settingsPanel label {
+        color: var(--sidebar-text) !important;
+        transition: color 0.3s ease;
       }
 
       .action-buttons {
@@ -258,8 +359,9 @@
       }
 
       #send-button,
-      #image-button {
-        background: rgb(0, 0, 72);
+      #image-button,
+      #voice-button {
+        background: var(--voice-btn-bg);
         color: white;
         border: none;
         border-radius: 50%;
@@ -317,7 +419,7 @@
         position: absolute;
         bottom: 60px;
         right: 0;
-        background: white;
+        background: var(--container-bg);
         border: 2px solid #007bff;
         border-radius: 10px;
         padding: 10px;
@@ -391,18 +493,15 @@
         left: 0;
         width: 230px;
         height: 100vh;
-        background: linear-gradient(
-          180deg,
-          rgb(0, 0, 72) 0%,
-          rgb(0, 0, 120) 100%
-        );
-        color: white;
+        background: var(--sidebar-bg);
+        color: var(--sidebar-text);
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         padding: 30px 0 20px 0;
         z-index: 100;
         box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+        transition: background 0.3s ease, color 0.3s ease;
       }
 
       .sidebar-header {
@@ -433,10 +532,14 @@
       }
 
       .sidebar-menu li:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--sidebar-hover);
       }
 
       @media (max-width: 768px) {
+        body {
+          padding: 15px; /* Adjusted mobile padding */
+        }
+
         .main-container {
           margin: 10px;
           height: calc(100vh - 20px);
@@ -509,11 +612,11 @@
       }
 
       .video-card {
-        background: white;
+        background: var(--container-bg);
         border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
       }
 
       .video-card:hover {
@@ -639,17 +742,26 @@
   <body>
     <!-- Sidebar markup -->
     <div class="sidebar">
-      <div class="sidebar-header">Vehicle Assistant</div>
+      <div class="sidebar-header">Doc Hudson</div>
       <ul class="sidebar-menu">
         <li><span>🏠</span> Home</li>
-        <li><span>💬</span> Chat History</li>
-        <li><span>⚙️</span> Settings</li>
-        <li><span>❓</span> Help</li>
+        <li onclick="window.location.href='/ml-diagnostics'" style="cursor: pointer;"><span>🔧</span> ML Diagnostics</li>
+        <li onclick="toggleSettings()" style="cursor: pointer;"><span>⚙️</span> Settings</li>
       </ul>
+      
+      <!-- Settings Panel -->
+      <div id="settingsPanel" style="display: none; padding: 20px; margin-top: 20px;">
+        <div style="margin-bottom: 15px;">
+          <label style="display: flex; align-items: center; gap: 10px; font-weight: 500;">
+            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()" style="transform: scale(1.2);">
+            <span>🌙 Dark Mode</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="header">
-      <h1>🚗 Vehicle Diagnostics Chatbot</h1>
+      <h1>Vehicle Diagnostics Chatbot</h1>
       <p>Smart diagnostics powered by NLP and AI technology</p>
       
       <!-- User Info and Logout -->
@@ -663,16 +775,10 @@
       {% endif %}
     </div>
 
-    <!-- Navigation Section -->
-    <div style="text-align: center; margin-bottom: 20px;">
-      <a href="/" class="nav-link active">🏠 Chat Assistant</a>
-      <a href="/ml-diagnostics" class="nav-link">🔧 ML Engine Diagnostics</a>
-    </div>
-
     <div class="main-container">
       <div class="chat-container">
         <div class="chat-header">
-          🤖 AI Assistant with Diagnostic Analysis - Describe your vehicle
+         AI Assistant with Diagnostic Analysis - Describe your vehicle
           problems
         </div>
 
@@ -1076,6 +1182,41 @@
           }
         }
       }
+
+      // Settings Panel Toggle
+      function toggleSettings() {
+        const settingsPanel = document.getElementById('settingsPanel');
+        if (settingsPanel.style.display === 'none' || settingsPanel.style.display === '') {
+          settingsPanel.style.display = 'block';
+        } else {
+          settingsPanel.style.display = 'none';
+        }
+      }
+
+      // Dark Mode Toggle
+      function toggleDarkMode() {
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+        
+        if (darkModeToggle.checked) {
+          body.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          body.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+        }
+      }
+
+      // Load saved theme on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        
+        if (savedTheme === 'dark') {
+          document.body.setAttribute('data-theme', 'dark');
+          darkModeToggle.checked = true;
+        }
+      });
     </script>
 
     <!-- Speech Recognition Module -->
