@@ -43,14 +43,19 @@ class DiagnosticProcessor:
         # Create searchable text for each OBD code
         self.searchable_texts = self._create_searchable_texts()
         
-        # Initialize TF-IDF vectorizer
+        # Initialize TF-IDF vectorizer with improved settings
         self.vectorizer = TfidfVectorizer(
             stop_words='english',
-            ngram_range=(1, 3),
-            max_features=5000,
+            ngram_range=(1, 4),  # Increased from (1,3) to capture more phrase patterns
+            max_features=8000,   # Increased from 5000 for better vocabulary coverage
             lowercase=True,
-            min_df=2,  # Ignore terms that appear in less than 2 documents
-            max_df=0.8  # Ignore terms that appear in more than 80% of documents
+            min_df=1,           # Reduced from 2 - don't ignore rare but important terms
+            max_df=0.9,         # Increased from 0.8 - keep more common automotive terms
+            token_pattern=r'(?u)\b\w+\b',  # Better tokenization
+            analyzer='word',
+            binary=False,       # Use TF-IDF weights, not just binary
+            smooth_idf=True,    # Smooth IDF weights
+            sublinear_tf=True   # Use sublinear TF scaling
         )
         
         # Fit vectorizer on all diagnostic texts
@@ -60,21 +65,44 @@ class DiagnosticProcessor:
         else:
             self.tfidf_matrix = None
         
-        # Vehicle symptom keywords mapping
+        # Enhanced automotive synonym mapping for better matching
+        self.automotive_synonyms = {
+            'o2': ['oxygen', 'lambda', 'air fuel ratio'],
+            'oxygen sensor': ['o2 sensor', 'lambda sensor', 'air fuel sensor'],
+            'cat': ['catalytic converter', 'catalyst'],
+            'maf': ['mass air flow', 'mass airflow'],
+            'map': ['manifold absolute pressure'],
+            'tps': ['throttle position sensor'],
+            'iac': ['idle air control'],
+            'egr': ['exhaust gas recirculation'],
+            'evap': ['evaporative emission', 'vapor canister'],
+            'pcv': ['positive crankcase ventilation'],
+            'check engine': ['cel', 'mil', 'malfunction indicator lamp'],
+            'misfire': ['engine miss', 'rough idle', 'rough running'],
+            'knock': ['ping', 'detonation', 'pre-ignition'],
+            'lean': ['running lean', 'lean condition', 'lean mixture'],
+            'rich': ['running rich', 'rich condition', 'rich mixture'],
+            'no start': ['wont start', 'will not start', 'cranks no start'],
+            'hard start': ['difficult start', 'slow start'],
+            'stall': ['stalling', 'dies', 'shuts off'],
+            'transmission': ['trans', 'tranny', 'gearbox']
+        }
+        
+        # Vehicle symptom keywords mapping (enhanced)
         self.symptom_keywords = {
-            'misfire': ['misfire', 'engine miss', 'rough idle', 'engine shake', 'rough running', 'stalling'],
-            'oxygen_sensor': ['o2 sensor', 'oxygen sensor', 'lambda sensor', 'exhaust sensor', 'air fuel ratio'],
-            'evap': ['evap', 'evaporative', 'emission', 'vapor', 'gas cap', 'fuel vapor', 'charcoal canister'],
-            'temperature': ['temperature', 'thermostat', 'coolant', 'overheating', 'running cold', 'cooling system'],
-            'knock': ['knock', 'pinging', 'engine knock', 'detonation', 'pre-ignition', 'rattling'],
-            'fuel': ['fuel', 'gas', 'gasoline', 'fuel pump', 'injector', 'lean', 'rich', 'fuel system'],
-            'ignition': ['ignition', 'spark plug', 'coil', 'distributor', 'firing', 'no start'],
-            'exhaust': ['exhaust', 'catalytic converter', 'cat', 'emissions', 'muffler'],
-            'vacuum': ['vacuum', 'vacuum leak', 'air leak', 'intake', 'manifold'],
-            'electrical': ['electrical', 'wiring', 'connection', 'circuit', 'short', 'battery', 'alternator'],
-            'transmission': ['transmission', 'shifting', 'gear', 'clutch', 'torque converter'],
-            'brakes': ['brake', 'braking', 'abs', 'brake light', 'brake pedal'],
-            'engine_performance': ['power loss', 'acceleration', 'performance', 'sluggish', 'lack of power']
+            'misfire': ['misfire', 'engine miss', 'rough idle', 'engine shake', 'rough running', 'stalling', 'bucking', 'jerking'],
+            'oxygen_sensor': ['o2 sensor', 'oxygen sensor', 'lambda sensor', 'exhaust sensor', 'air fuel ratio', 'running lean', 'running rich'],
+            'evap': ['evap', 'evaporative', 'emission', 'vapor', 'gas cap', 'fuel vapor', 'charcoal canister', 'purge valve'],
+            'temperature': ['temperature', 'thermostat', 'coolant', 'overheating', 'running cold', 'cooling system', 'radiator'],
+            'knock': ['knock', 'pinging', 'engine knock', 'detonation', 'pre-ignition', 'rattling', 'carbon knock'],
+            'fuel': ['fuel', 'gas', 'gasoline', 'fuel pump', 'injector', 'lean', 'rich', 'fuel system', 'fuel pressure'],
+            'ignition': ['ignition', 'spark plug', 'coil', 'distributor', 'firing', 'no start', 'misfire', 'spark'],
+            'exhaust': ['exhaust', 'catalytic converter', 'cat', 'emissions', 'muffler', 'tailpipe'],
+            'vacuum': ['vacuum', 'vacuum leak', 'air leak', 'intake', 'manifold', 'hose leak'],
+            'electrical': ['electrical', 'wiring', 'connection', 'circuit', 'short', 'battery', 'alternator', 'voltage'],
+            'transmission': ['transmission', 'shifting', 'gear', 'clutch', 'torque converter', 'trans', 'shift'],
+            'brakes': ['brake', 'braking', 'abs', 'brake light', 'brake pedal', 'stopping'],
+            'engine_performance': ['power loss', 'acceleration', 'performance', 'sluggish', 'lack of power', 'low power']
         }
         
         # Non-diagnostic phrases that should be filtered out
@@ -123,24 +151,58 @@ class DiagnosticProcessor:
         return searchable_texts
     
     def _preprocess_text(self, text):
-        """Preprocess text for NLP analysis"""
+        """Enhanced preprocessing with synonym expansion and automotive term normalization"""
         # Convert to lowercase
         text = text.lower()
         
-        # Remove special characters and numbers (keep spaces)
-        text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+        # Expand automotive synonyms BEFORE tokenization
+        expanded_text = text
+        for main_term, synonyms in self.automotive_synonyms.items():
+            for synonym in synonyms:
+                if synonym in expanded_text:
+                    # Add the main term as well to increase matching chances
+                    expanded_text = expanded_text.replace(synonym, f"{synonym} {main_term}")
+        
+        # Handle common automotive abbreviations and variations
+        automotive_expansions = {
+            'cel': 'check engine light',
+            'mil': 'malfunction indicator lamp check engine light',
+            'dtc': 'diagnostic trouble code',
+            'obd': 'on board diagnostic',
+            'rpm': 'revolutions per minute engine speed',
+            'mpg': 'miles per gallon fuel economy',
+            'a/c': 'air conditioning',
+            'p0': 'powertrain code',
+            'b0': 'body code',
+            'c0': 'chassis code',
+            'u0': 'network code'
+        }
+        
+        for abbrev, expansion in automotive_expansions.items():
+            if abbrev in expanded_text:
+                expanded_text = expanded_text.replace(abbrev, f"{abbrev} {expansion}")
+        
+        # Remove special characters and numbers (but preserve spaces and important chars)
+        expanded_text = re.sub(r'[^a-zA-Z\s]', ' ', expanded_text)
         
         # Tokenize
-        tokens = word_tokenize(text)
+        tokens = word_tokenize(expanded_text)
         
-        # Remove stopwords and lemmatize
-        tokens = [
-            self.lemmatizer.lemmatize(token) 
-            for token in tokens 
-            if token not in self.stop_words and len(token) > 2
-        ]
+        # Enhanced stopword removal - keep automotive-relevant words
+        automotive_stopwords_to_keep = {
+            'no', 'not', 'low', 'high', 'hard', 'slow', 'fast', 'bad', 'good'
+        }
         
-        return ' '.join(tokens)
+        effective_stopwords = self.stop_words - automotive_stopwords_to_keep
+        
+        # Remove stopwords and lemmatize, but keep shorter automotive terms
+        processed_tokens = []
+        for token in tokens:
+            if len(token) > 1 and token not in effective_stopwords:  # Reduced from > 2 to > 1
+                lemmatized = self.lemmatizer.lemmatize(token)
+                processed_tokens.append(lemmatized)
+        
+        return ' '.join(processed_tokens)
     
     def _is_valid_diagnostic_input(self, user_input):
         """Validate if the input is suitable for diagnostic processing"""
@@ -220,7 +282,7 @@ class DiagnosticProcessor:
         # 2. DIRECT TEXT MATCHING WITH ACTUAL DATA (60% weight)
         text_match_score = 0
         
-        # A. EXACT DESCRIPTION MATCHING
+        # A. EXACT DESCRIPTION MATCHING - More generous scoring
         # Split description into meaningful words
         desc_words = [word for word in code_description.split() if len(word) > 2]
         matched_desc_words = []
@@ -228,43 +290,71 @@ class DiagnosticProcessor:
         for word in desc_words:
             if word in user_lower:
                 matched_desc_words.append(word)
-                text_match_score += 8  # 8 points per description word match
-                print(f"   ✅ Description word match: '{word}'")
+                text_match_score += 12  # Increased from 8 to 12 points per description word match
+                print(f"   ✅ Description word match: '{word}' (+12)")
+            # Also check for partial word matches (more flexible)
+            elif len(word) > 4:
+                for user_word in user_lower.split():
+                    if len(user_word) > 3 and (word in user_word or user_word in word):
+                        matched_desc_words.append(f"{word}~{user_word}")
+                        text_match_score += 8  # Partial word match bonus
+                        print(f"   ✅ Partial description match: '{word}' ~ '{user_word}' (+8)")
+                        break
         
-        # B. EXACT PHRASE MATCHING from description
+        # B. EXACT PHRASE MATCHING from description - More generous
         # Check for multi-word phrases from actual description
         if len(desc_words) > 1:
             for i in range(len(desc_words) - 1):
-                for length in [3, 2]:  # Try 3-word and 2-word phrases
+                for length in [4, 3, 2]:  # Try 4-word, 3-word and 2-word phrases
                     if i + length <= len(desc_words):
                         phrase = ' '.join(desc_words[i:i+length])
                         if len(phrase) > 6 and phrase in user_lower:
-                            text_match_score += 20  # Big bonus for phrase matches
-                            print(f"   🎯 EXACT PHRASE MATCH: '{phrase}' (+20)")
+                            bonus = 25 if length >= 3 else 15  # Bigger bonus for longer phrases
+                            text_match_score += bonus
+                            print(f"   🎯 EXACT PHRASE MATCH: '{phrase}' (+{bonus})")
         
-        # C. COMMON CAUSES MATCHING with actual data
+        # C. COMMON CAUSES MATCHING with actual data - Much more generous
         matched_causes = []
         for cause in code_causes:
             cause_words = [word for word in cause.split() if len(word) > 2]
             
             # Check for exact cause matches
             if cause in user_lower:
-                text_match_score += 15  # 15 points for exact cause match
+                text_match_score += 20  # Increased from 15 to 20 points for exact cause match
                 matched_causes.append(cause)
-                print(f"   🎯 EXACT CAUSE MATCH: '{cause}' (+15)")
+                print(f"   🎯 EXACT CAUSE MATCH: '{cause}' (+20)")
             else:
-                # Check for partial cause word matches
+                # Check for partial cause word matches - Much more generous
                 cause_word_matches = 0
+                partial_matches = []
+                
                 for word in cause_words:
                     if word in user_lower:
                         cause_word_matches += 1
+                        partial_matches.append(word)
+                    # Also check for partial word matches within causes
+                    elif len(word) > 4:
+                        for user_word in user_lower.split():
+                            if len(user_word) > 3:
+                                # Check for substring matches or similar words
+                                if word in user_word or user_word in word:
+                                    cause_word_matches += 0.7  # Partial credit
+                                    partial_matches.append(f"{word}~{user_word}")
+                                    break
                 
                 if cause_word_matches > 0:
-                    partial_score = (cause_word_matches / len(cause_words)) * 10
-                    text_match_score += partial_score
-                    print(f"   ✅ Partial cause match: '{cause}' - {cause_word_matches}/{len(cause_words)} words (+{partial_score:.1f})")
+                    # More generous scoring for partial cause matches
+                    base_score = (cause_word_matches / len(cause_words)) * 15  # Increased from 10 to 15
+                    
+                    # Bonus for multiple word matches in single cause
+                    if cause_word_matches >= 2:
+                        base_score += 5  # Multi-word bonus
+                    
+                    text_match_score += base_score
+                    print(f"   ✅ Partial cause match: '{cause}' - {cause_word_matches}/{len(cause_words)} words (+{base_score:.1f})")
+                    print(f"      Matched: {partial_matches}")
         
-        text_match_score = min(text_match_score, 60)  # Cap at 60%
+        text_match_score = min(text_match_score, 70)  # Increased cap from 60 to 70%
         factors['actual_data_matching'] = text_match_score
         
         # 3. SEMANTIC SIMILARITY FROM NLP (25% weight)
@@ -574,79 +664,131 @@ class DiagnosticProcessor:
         return True, diagnostic_confidence, f"Valid diagnostic input (confidence: {diagnostic_confidence:.1f}%)"
     
     def _extract_symptoms(self, user_input):
-        """Extract vehicle symptoms from user input"""
+        """Extract vehicle symptoms from user input with fuzzy matching"""
         user_input_lower = user_input.lower()
         detected_symptoms = []
         
+        # Direct keyword matching (exact)
         for symptom_category, keywords in self.symptom_keywords.items():
             for keyword in keywords:
                 if keyword in user_input_lower:
                     detected_symptoms.append(symptom_category)
                     break
         
-        return detected_symptoms
+        # Fuzzy matching for symptoms (to catch variations)
+        if not detected_symptoms:  # Only if no exact matches
+            for symptom_category, keywords in self.symptom_keywords.items():
+                for keyword in keywords:
+                    # Check if any word in user input is similar to keyword
+                    for word in user_input_lower.split():
+                        if len(word) > 3:  # Skip very short words
+                            similarity = fuzz.ratio(word, keyword) / 100.0
+                            if similarity > 0.7:  # 70% similarity threshold
+                                detected_symptoms.append(symptom_category)
+                                break
+                    if symptom_category in detected_symptoms:
+                        break
+        
+        return list(set(detected_symptoms))  # Remove duplicates
     
     def _calculate_tfidf_similarity(self, user_input):
         """
-        Calculate TF-IDF cosine similarity between user input and ALL OBD codes data
-        Now properly scans the actual JSON data instead of predefined keywords
+        Enhanced TF-IDF cosine similarity with better matching and preprocessing
         """
         if self.tfidf_matrix is None:
             return []
             
-        # Preprocess user input
-        processed_input = self._preprocess_text(user_input)
-        if not processed_input.strip():
-            return []
+        # Enhanced preprocessing - create multiple variations of user input
+        original_processed = self._preprocess_text(user_input)
         
-        print(f"🔍 TF-IDF: Scanning ALL {len(self.obd_codes)} OBD codes for: '{user_input}'")
-            
-        try:
-            # Transform user input using fitted vectorizer
-            user_vector = self.vectorizer.transform([processed_input])
-            
-            # Calculate cosine similarity against ALL codes
-            similarities = cosine_similarity(user_vector, self.tfidf_matrix).flatten()
-            
-            # Create results list with detailed matching info
-            results = []
-            code_ids = list(self.searchable_texts.keys())
-            
-            for i, similarity in enumerate(similarities):
-                if similarity > 0.02:  # Very low threshold to catch more potential matches
-                    code_id = code_ids[i]
-                    
-                    # Find the actual code data for this match
-                    code_data = self._find_code_by_id(code_id)
-                    if code_data:
-                        matched_text = self.searchable_texts[code_id]
-                        
-                        results.append({
-                            'code_id': code_id,
-                            'similarity': float(similarity),
-                            'method': 'tfidf',
-                            'description': code_data['description'],
-                            'matched_content': matched_text[:100] + "..." if len(matched_text) > 100 else matched_text
-                        })
-                        
-                        # Log significant matches
-                        if similarity > 0.1:
-                            print(f"   🎯 TF-IDF Strong Match: {code_id} ({similarity:.3f}) - {code_data['description']}")
-                        elif similarity > 0.05:
-                            print(f"   ✅ TF-IDF Good Match: {code_id} ({similarity:.3f}) - {code_data['description']}")
-            
-            # Sort by similarity score (highest first)
-            sorted_results = sorted(results, key=lambda x: x['similarity'], reverse=True)
-            
-            print(f"🔍 TF-IDF: Found {len(sorted_results)} potential matches")
-            if sorted_results:
-                print(f"   Top match: {sorted_results[0]['code_id']} ({sorted_results[0]['similarity']:.3f})")
+        # Create additional variations for better matching
+        variations = [original_processed]
+        
+        # Add variation with original user input (less processed)
+        simple_clean = user_input.lower().strip()
+        variations.append(simple_clean)
+        
+        # Add variation with just automotive terms extracted
+        automotive_terms = []
+        for term in user_input.lower().split():
+            if any(keyword in term or term in keyword 
+                   for symptom_list in self.symptom_keywords.values() 
+                   for keyword in symptom_list):
+                automotive_terms.append(term)
+        
+        if automotive_terms:
+            variations.append(' '.join(automotive_terms))
+        
+        print(f"🔍 TF-IDF: Processing {len(variations)} variations for: '{user_input}'")
+        print(f"   Variations: {variations}")
+        
+        best_results = []
+        
+        for variation_idx, processed_input in enumerate(variations):
+            if not processed_input.strip():
+                continue
                 
-            return sorted_results
-            
-        except Exception as e:
-            print(f"❌ Error in TF-IDF calculation: {e}")
-            return []
+            try:
+                # Transform user input using fitted vectorizer
+                user_vector = self.vectorizer.transform([processed_input])
+                
+                # Calculate cosine similarity against ALL codes
+                similarities = cosine_similarity(user_vector, self.tfidf_matrix).flatten()
+                
+                # Create results list with detailed matching info
+                code_ids = list(self.searchable_texts.keys())
+                
+                for i, similarity in enumerate(similarities):
+                    # Much more inclusive threshold
+                    if similarity > 0.01:  # Reduced from 0.02 to 0.01
+                        code_id = code_ids[i]
+                        
+                        # Find the actual code data for this match
+                        code_data = self._find_code_by_id(code_id)
+                        if code_data:
+                            matched_text = self.searchable_texts[code_id]
+                            
+                            # Boost score if this is from a better variation
+                            boosted_similarity = similarity
+                            if variation_idx == 0:  # Original processed version
+                                boosted_similarity *= 1.0
+                            elif variation_idx == 1:  # Simple clean version
+                                boosted_similarity *= 0.9
+                            else:  # Automotive terms only
+                                boosted_similarity *= 1.1  # Slight boost for automotive-focused
+                            
+                            best_results.append({
+                                'code_id': code_id,
+                                'similarity': float(boosted_similarity),
+                                'method': f'tfidf_v{variation_idx}',
+                                'description': code_data['description'],
+                                'matched_content': matched_text[:100] + "..." if len(matched_text) > 100 else matched_text,
+                                'variation_used': variation_idx
+                            })
+                            
+                            # Log significant matches
+                            if boosted_similarity > 0.08:
+                                print(f"   🎯 TF-IDF Strong Match: {code_id} ({boosted_similarity:.3f}) - {code_data['description'][:50]}...")
+                            elif boosted_similarity > 0.03:
+                                print(f"   ✅ TF-IDF Good Match: {code_id} ({boosted_similarity:.3f}) - {code_data['description'][:50]}...")
+                
+            except Exception as e:
+                print(f"   ❌ Error processing variation {variation_idx}: {e}")
+                continue
+        
+        # Remove duplicates and keep best score for each code
+        unique_results = {}
+        for result in best_results:
+            code_id = result['code_id']
+            if code_id not in unique_results or result['similarity'] > unique_results[code_id]['similarity']:
+                unique_results[code_id] = result
+        
+        # Sort by similarity score (highest first)
+        sorted_results = sorted(unique_results.values(), key=lambda x: x['similarity'], reverse=True)
+        
+        print(f"   📊 TF-IDF found {len(sorted_results)} potential matches")
+        
+        return sorted_results[:20]  # Return top 20 matches instead of 10
     
     def _calculate_fuzzy_similarity(self, user_input):
         """
@@ -721,8 +863,8 @@ class DiagnosticProcessor:
                         best_match_text = cause
                         match_type = "individual_cause"
             
-            # Include if score is above threshold (lowered for better coverage)
-            if max_score > 0.2:  # 20% threshold instead of 25%
+            # Include if score is above threshold (very inclusive for better coverage)
+            if max_score > 0.15:  # 15% threshold for maximum inclusivity
                 results.append({
                     'code_id': code_id,
                     'similarity': max_score,
@@ -808,12 +950,12 @@ class DiagnosticProcessor:
     
     def process_user_input(self, user_input, top_n=5, confidence_threshold=50.0):
         """
-        Enhanced processing with 90% confidence threshold for intelligent LLM routing
+        Enhanced processing with 50% confidence threshold for intelligent LLM routing
         
         Args:
             user_input (str): User's description of the vehicle problem
             top_n (int): Number of top results to return
-            confidence_threshold (float): Minimum confidence to pass codes to LLM (default 90%)
+            confidence_threshold (float): Minimum confidence to pass codes to LLM (default 50%)
             
         Returns:
             dict: Contains matched codes, routing decision, confidence scores, and analysis

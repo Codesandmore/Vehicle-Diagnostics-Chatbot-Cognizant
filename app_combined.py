@@ -23,6 +23,7 @@ from firebase_config import FIREBASE_CONFIG
 def ensure_ffmpeg_path():
     """Ensure FFmpeg is accessible by adding common installation paths"""
     ffmpeg_paths = [
+        os.path.join(os.path.dirname(__file__), 'ffmpeg', 'bin'),  # Root directory of project
         r'C:\ffmpeg\bin',
         r'C:\Program Files\ffmpeg\bin', 
         r'C:\ProgramData\chocolatey\bin',
@@ -358,11 +359,11 @@ def send_message():
             try:
                 print(f"🔍 Processing with enhanced NLP routing: {user_message}")
                 
-                # Use enhanced processor with 90% confidence threshold
+                # Use enhanced processor with 70% confidence threshold
                 nlp_results = diagnostic_processor.process_user_input(
                     user_message, 
                     top_n=5, 
-                    confidence_threshold=90.0
+                    confidence_threshold=70.0
                 )
                 
                 routing_decision = nlp_results.get('analysis', {}).get('routing_decision', 'LLM_ONLY')
