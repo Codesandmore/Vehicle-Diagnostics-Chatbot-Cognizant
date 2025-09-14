@@ -2,12 +2,16 @@ import os
 import base64
 import logging  # Add this missing import
 import google.generativeai as genai
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_session import Session
 from dotenv import load_dotenv
 from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
 from speech.speech_handler import transcribe_audio_file, get_speech_status
 from speech.speech_utils import AudioValidator, AudioProcessor
 import tempfile
+import pyrebase
+from functools import wraps
+from firebase_config import FIREBASE_CONFIG
 # from PIL import Image
 # import io
 # import json
@@ -35,6 +39,21 @@ def ensure_ffmpeg_path():
 # Call FFmpeg path setup early
 ensure_ffmpeg_path()
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize Firebase
+try:
+    firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
+    auth = firebase.auth()
+    print("✅ Firebase authentication initialized successfully")
+    firebase_available = True
+except Exception as e:
+    print(f"❌ Firebase initialization failed: {e}")
+    print("💡 Please check your firebase_config.py file")
+    auth = None
+    firebase_available = False
+
 # Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,6 +72,12 @@ else:
 
 app = Flask(__name__)
 
+# Configure Flask session for authentication
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this')
+app.config['SESSION_PERMANENT'] = False
+Session(app)
+
 # Initialize the enhanced diagnostic processor for NLP functionality
 try:
     obd_codes_path = os.path.join(os.path.dirname(__file__), 'data', 'obd_codes.json')
@@ -64,11 +89,153 @@ except Exception as e:
     diagnostic_processor = None
     nlp_available = False
 
+# Authentication helper functions
+def login_required(f):
+    """Decorator to require login for protected routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not firebase_available:
+            flash('Authentication system is currently unavailable', 'error')
+            return redirect(url_for('login'))
+        
+        if 'user' not in session:
+            flash('Please log in to access this page', 'warning')
+            return redirect(url_for('login'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    """Get current logged-in user from session"""
+    return session.get('user', None)
+
+# Authentication routes
+@app.route("/login")
+def login():
+    """Display login page"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return render_template("login.html", firebase_available=firebase_available)
+
+@app.route("/register")
+def register():
+    """Display registration page"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return render_template("register.html", firebase_available=firebase_available)
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    """Main dashboard - protected route"""
+    user = get_current_user()
+    return render_template("index.html", user=user, firebase_available=firebase_available)
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    """Handle login form submission"""
+    if not firebase_available:
+        return jsonify({"success": False, "message": "Authentication system unavailable"})
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required"})
+        
+        # Authenticate with Firebase
+        user = auth.sign_in_with_email_and_password(email, password)
+        
+        # Store user info in session
+        session['user'] = {
+            'uid': user['localId'],
+            'email': email,
+            'token': user['idToken']
+        }
+        
+        return jsonify({"success": True, "message": "Login successful", "redirect": url_for('dashboard')})
+        
+    except Exception as e:
+        error_message = str(e)
+        if "INVALID_EMAIL" in error_message:
+            return jsonify({"success": False, "message": "Invalid email format"})
+        elif "EMAIL_NOT_FOUND" in error_message:
+            return jsonify({"success": False, "message": "Email not found"})
+        elif "INVALID_PASSWORD" in error_message:
+            return jsonify({"success": False, "message": "Invalid password"})
+        else:
+            return jsonify({"success": False, "message": "Login failed. Please try again."})
+
+@app.route("/auth/register", methods=["POST"])
+def auth_register():
+    """Handle registration form submission"""
+    if not firebase_available:
+        return jsonify({"success": False, "message": "Authentication system unavailable"})
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        first_name = data.get('firstName', '')
+        last_name = data.get('lastName', '')
+        organization = data.get('organization', '')
+        
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required"})
+        
+        if len(password) < 6:
+            return jsonify({"success": False, "message": "Password must be at least 6 characters"})
+        
+        # Create user with Firebase
+        user = auth.create_user_with_email_and_password(email, password)
+        
+        # Store user info in session
+        session['user'] = {
+            'uid': user['localId'],
+            'email': email,
+            'firstName': first_name,
+            'lastName': last_name,
+            'organization': organization,
+            'token': user['idToken']
+        }
+        
+        return jsonify({"success": True, "message": "Registration successful", "redirect": url_for('dashboard')})
+        
+    except Exception as e:
+        error_message = str(e)
+        if "EMAIL_EXISTS" in error_message:
+            return jsonify({"success": False, "message": "Email already exists"})
+        elif "INVALID_EMAIL" in error_message:
+            return jsonify({"success": False, "message": "Invalid email format"})
+        elif "WEAK_PASSWORD" in error_message:
+            return jsonify({"success": False, "message": "Password is too weak"})
+        else:
+            return jsonify({"success": False, "message": "Registration failed. Please try again."})
+
+@app.route("/auth/logout", methods=["GET", "POST"])
+def auth_logout():
+    """Handle user logout"""
+    session.pop('user', None)
+    
+    # Handle AJAX requests
+    if request.method == "POST":
+        return jsonify({"success": True, "message": "Logged out successfully"})
+    
+    # Handle direct GET requests
+    flash('You have been logged out successfully', 'success')
+    return redirect(url_for('login'))
+
 @app.route("/")
 def index():
-    return render_template("index_simple.html")
+    """Redirect to login or dashboard based on authentication"""
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route("/send_message", methods=["POST"])
+@login_required
 def send_message():
     """
     Enhanced chatbot endpoint with intelligent routing:
@@ -282,6 +449,7 @@ def _generate_routing_info(routing_decision, confidence_info):
         return "🤖 *General automotive consultation*"
 
 @app.route("/diagnose", methods=["POST"])
+@login_required
 def diagnose():
     """Enhanced NLP diagnosis endpoint with routing information"""
     try:

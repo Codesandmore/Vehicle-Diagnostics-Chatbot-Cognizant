@@ -59,6 +59,50 @@
         font-weight: 500;
       }
 
+      .user-session {
+        background: #343a40;
+        color: white;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9em;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .user-avatar {
+        width: 30px;
+        height: 30px;
+        background: #007bff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8em;
+      }
+
+      .logout-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .logout-btn:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+      }
+
       .examples-section {
         background: #f8f9fa;
         padding: 15px 20px;
@@ -394,6 +438,24 @@
           🤖 Unified Vehicle Assistant - Ask anything or describe your vehicle
           problems
         </div>
+
+        <!-- User Session Information -->
+        {% if session.user %}
+        <div class="user-session">
+          <div class="user-info">
+            <div class="user-avatar">
+              {{ session.user.email[0].upper() }}
+            </div>
+            <span>Welcome, {{ session.user.get('firstName', 'User') }}!</span>
+            {% if session.user.get('organization') %}
+              <span style="opacity: 0.7;">• {{ session.user.organization }}</span>
+            {% endif %}
+          </div>
+          <button class="logout-btn" onclick="handleLogout()">
+            🚪 Sign Out
+          </button>
+        </div>
+        {% endif %}
 
         <div class="examples-section">
           <div class="examples-title">💡 Try these examples:</div>
@@ -812,6 +874,28 @@
           );
         }, 500);
       });
+
+      // Logout function
+      async function handleLogout() {
+        if (confirm('Are you sure you want to sign out?')) {
+          try {
+            const response = await fetch('/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+            
+            if (response.ok) {
+              window.location.href = '/auth/login';
+            } else {
+              alert('Error signing out. Please try again.');
+            }
+          } catch (error) {
+            alert('Network error. Please try again.');
+          }
+        }
+      }
     </script>
   </body>
 </html>
