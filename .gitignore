@@ -279,6 +279,3 @@ wandb/
 # Cache directories
 .cache/
 __pycache__/
-
-# FFmpeg (if downloaded locally)
-ffmpeg/

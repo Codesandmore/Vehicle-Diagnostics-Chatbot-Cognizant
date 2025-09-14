@@ -6,7 +6,7 @@ flask-session
 google-generativeai
 nltk
 scikit-learn
-numpy   # ✅ last version supporting Python 3.10
+numpy   
 pandas
 matplotlib
 seaborn
