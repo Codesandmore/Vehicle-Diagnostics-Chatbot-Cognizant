@@ -886,12 +886,20 @@
               }
             });
             
-            if (response.ok) {
-              window.location.href = '/auth/login';
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              // Redirect to login page
+              if (result.redirect) {
+                window.location.href = result.redirect;
+              } else {
+                window.location.href = '/login';
+              }
             } else {
               alert('Error signing out. Please try again.');
             }
           } catch (error) {
+            console.error('Logout error:', error);
             alert('Network error. Please try again.');
           }
         }

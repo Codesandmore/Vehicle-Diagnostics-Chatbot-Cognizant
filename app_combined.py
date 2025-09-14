@@ -224,7 +224,7 @@ def register():
 def dashboard():
     """Main dashboard - protected route"""
     user = get_current_user()
-    return render_template("index.html", user=user, firebase_available=firebase_available)
+    return render_template("index_simple.html", user=user, firebase_available=firebase_available)
 
 @app.route("/auth/login", methods=["POST"])
 def auth_login():
@@ -316,7 +316,7 @@ def auth_logout():
     
     # Handle AJAX requests
     if request.method == "POST":
-        return jsonify({"success": True, "message": "Logged out successfully"})
+        return jsonify({"success": True, "message": "Logged out successfully", "redirect": url_for('login')})
     
     # Handle direct GET requests
     flash('You have been logged out successfully', 'success')

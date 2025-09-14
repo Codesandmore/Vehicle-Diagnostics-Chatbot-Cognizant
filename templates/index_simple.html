@@ -56,6 +56,40 @@
         color: white;
       }
 
+      .logout-container {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: rgb(0,0,72);
+        font-size: 0.9em;
+      }
+
+      .logout-btn {
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+      }
+
+      .logout-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+      }
+
+      .user-info {
+        font-weight: 600;
+        color: rgb(0,0,72);
+      }
+
       .main-container {
         max-width: 900px;
         margin: 0 auto;
@@ -617,6 +651,16 @@
     <div class="header">
       <h1>🚗 Vehicle Diagnostics Chatbot</h1>
       <p>Smart diagnostics powered by NLP and AI technology</p>
+      
+      <!-- User Info and Logout -->
+      {% if user %}
+      <div class="logout-container">
+        <span class="user-info">👤 {{ user.email or 'User' }}</span>
+        <button class="logout-btn" onclick="handleLogout()">
+          🚪 Sign Out
+        </button>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Navigation Section -->
@@ -1002,6 +1046,36 @@
         // Initialize speech recognition after page load
         initializeSpeechRecognition();
       });
+
+      // Logout function
+      async function handleLogout() {
+        if (confirm('Are you sure you want to sign out?')) {
+          try {
+            const response = await fetch('/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              // Redirect to login page
+              if (result.redirect) {
+                window.location.href = result.redirect;
+              } else {
+                window.location.href = '/login';
+              }
+            } else {
+              alert('Error signing out. Please try again.');
+            }
+          } catch (error) {
+            console.error('Logout error:', error);
+            alert('Network error. Please try again.');
+          }
+        }
+      }
     </script>
 
     <!-- Speech Recognition Module -->
