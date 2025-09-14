@@ -35,6 +35,27 @@
         opacity: 0.9;
       }
 
+      .nav-link {
+        color: rgb(0,0,72);
+        text-decoration: none;
+        margin: 0 15px;
+        padding: 8px 16px;
+        border: 2px solid rgb(0,0,72);
+        border-radius: 5px;
+        transition: all 0.3s ease;
+        display: inline-block;
+      }
+
+      .nav-link:hover {
+        background-color: rgb(0,0,72);
+        color: white !important;
+      }
+
+      .nav-link.active {
+        background-color: rgb(0,0,72);
+        color: white;
+      }
+
       .main-container {
         max-width: 900px;
         margin: 0 auto;
@@ -429,6 +450,12 @@
     <div class="header">
       <h1>🚗 Vehicle Diagnostics Chatbot</h1>
       <p>Smart diagnostics powered by NLP and AI technology</p>
+    </div>
+
+    <!-- Navigation Section -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <a href="/" class="nav-link active">🏠 Chat Assistant</a>
+      <a href="/ml-diagnostics" class="nav-link">🔧 ML Engine Diagnostics</a>
     </div>
 
     <div class="main-container">
