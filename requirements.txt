@@ -1,11 +1,15 @@
 # Web Framework
 Flask
+flask-session
 
 # AI/ML Libraries
 google-generativeai
 nltk
 scikit-learn
 numpy   # ✅ last version supporting Python 3.10
+pandas
+matplotlib
+seaborn
 
 # String Processing
 fuzzywuzzy
@@ -19,6 +23,9 @@ python-dotenv
 
 # Utilities
 requests
+
+# Firebase Authentication
+pyrebase4
 
 # YouTube API Integration
 google-api-python-client

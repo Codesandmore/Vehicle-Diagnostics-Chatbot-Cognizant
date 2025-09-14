@@ -64,6 +64,8 @@ db.sqlite3-journal
 # Flask stuff:
 instance/
 .webassets-cache
+flask_session/
+sessions/
 
 # Scrapy stuff:
 .scrapy
@@ -229,12 +231,14 @@ data/
 config.py
 settings.py
 secrets.json
+firebase_config.py
 
 # Ignore large model files if any
 *.pkl
 *.joblib
 *.h5
 *.model
+*.bin
 
 # Ignore log files
 *.log
@@ -250,3 +254,31 @@ python-3.*.exe
 
 # NLTK data (optional - you might want to track this)
 # nltk_data/
+
+# ML/Data Science specific
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Dataset files (often large)
+*.csv
+*.xlsx
+*.json
+!obd_codes.json
+
+# Model artifacts
+models/
+checkpoints/
+*.pth
+*.onnx
+
+# Experiment tracking
+mlruns/
+.mlflow/
+wandb/
+
+# Cache directories
+.cache/
+__pycache__/
+
+# FFmpeg (if downloaded locally)
+ffmpeg/
