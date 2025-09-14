@@ -287,7 +287,7 @@ def diagnose():
     try:
         data = request.get_json()
         user_input = data.get("message", "").strip()
-        confidence_threshold = data.get("confidence_threshold", 70.0)
+        confidence_threshold = data.get("confidence_threshold", 50.0)
         
         if not user_input:
             return jsonify({
