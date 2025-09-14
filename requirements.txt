@@ -19,3 +19,14 @@ python-dotenv
 
 # Utilities
 requests
+
+# YouTube API Integration
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+
+# Audio Processing (for speech-to-text)
+openai-whisper
+torch
+torchaudio
+pydub

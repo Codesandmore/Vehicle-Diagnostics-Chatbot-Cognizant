@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Vehicle Engine Diagnostics - Vehicle Diagnostics Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: rgb(0,0,72);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .navigation {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-link {
+            color: rgb(0,0,72);
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border: 2px solid rgb(0,0,72);
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .nav-link:hover {
+            background-color: rgb(0,0,72);
+            color: white;
+        }
+
+        .nav-link.active {
+            background-color: rgb(0,0,72);
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .diagnostic-header {
+            background: linear-gradient(90deg, rgb(0,0,72) 0%, rgb(0,0,120) 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 500;
+        }
+
+        .diagnostic-form {
+            background: #f8f9fa;
+            padding: 30px;
+            margin: 0;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid rgb(0,0,72);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .form-section h3 {
+            color: rgb(0,0,72);
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95em;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: rgb(0,0,72);
+            box-shadow: 0 0 0 3px rgba(0, 0, 72, 0.1);
+        }
+
+        .input-group input:valid {
+            border-color: #28a745;
+        }
+
+        .input-group .unit {
+            position: absolute;
+            right: 15px;
+            top: 43px;
+            color: #6c757d;
+            font-size: 13px;
+            font-weight: 500;
+            pointer-events: none;
+            background: white;
+            padding: 0 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 180px;
+        }
+
+        #analyzeBtn {
+            background: linear-gradient(90deg, rgb(0,0,72) 0%, rgb(0,0,120) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 72, 0.3);
+        }
+
+        #analyzeBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 72, 0.4);
+        }
+
+        #analyzeBtn:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        #clearBtn {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        #clearBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        #sampleBtn {
+            background: linear-gradient(90deg, #28a745 0%, #218838 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        #sampleBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgb(0,0,72);
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid rgb(0,0,72);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading p {
+            color: rgb(0,0,72);
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            border: 2px solid #e1e5e9;
+        }
+
+        .results.hidden {
+            display: none;
+        }
+
+        .results h2 {
+            color: rgb(0,0,72);
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ddd;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .result-card.normal {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+
+        .result-card.warning {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        }
+
+        .result-card.critical {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.normal {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-badge.warning {
+            background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .status-badge.critical {
+            background: linear-gradient(90deg, #dc3545 0%, #e74c3c 100%);
+            color: white;
+            box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+        }
+
+        .recommendation-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid;
+        }
+
+        .recommendation-box h4 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+        }
+
+        .recommendation-box ul {
+            margin: 0;
+            padding-left: 25px;
+        }
+
+        .recommendation-box li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .button-group button {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 ML Vehicle Engine Diagnostics</h1>
+        <p>Advanced anomaly detection using sensor data analysis</p>
+    </div>
+
+    <div class="navigation">
+        <a href="/" class="nav-link">🏠 Main Chat</a>
+        <a href="/ml-diagnostics" class="nav-link">🔧 ML Diagnostics</a>
+    </div>
+
+    <div class="container">
+        <div class="diagnostic-header">
+            🔧 Advanced Engine Diagnostics - ML-Powered Analysis
+        </div>
+
+        <div class="diagnostic-form">
+            <form id="diagnosticForm">
+                <div class="form-grid">
+                    <!-- Vibration Measurements -->
+                    <div class="form-section">
+                        <h3>🔧 Vibration Measurements</h3>
+                        <div class="input-group">
+                            <label for="vibration_amplitude">Vibration Amplitude</label>
+                            <input type="number" id="vibration_amplitude" step="0.01" placeholder="e.g., 0.45" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="rms_vibration">RMS Vibration</label>
+                            <input type="number" id="rms_vibration" step="0.01" placeholder="e.g., 0.12" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="vibration_frequency">Vibration Frequency</label>
+                            <input type="number" id="vibration_frequency" step="0.1" placeholder="e.g., 300.0" required>
+                            <span class="unit">Hz</span>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Measurements -->
+                    <div class="form-section">
+                        <h3>🌡️ Temperature Measurements</h3>
+                        <div class="input-group">
+                            <label for="surface_temperature">Surface Temperature</label>
+                            <input type="number" id="surface_temperature" step="0.1" placeholder="e.g., 85.0" required>
+                            <span class="unit">°C</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="exhaust_temperature">Exhaust Temperature</label>
+                            <input type="number" id="exhaust_temperature" step="0.1" placeholder="e.g., 450.0" required>
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Acoustic Measurements -->
+                    <div class="form-section">
+                        <h3>🔊 Acoustic Measurements</h3>
+                        <div class="input-group">
+                            <label for="acoustic_db">Acoustic Level</label>
+                            <input type="number" id="acoustic_db" step="0.1" placeholder="e.g., 72.0" required>
+                            <span class="unit">dB</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="acoustic_frequency">Acoustic Frequency</label>
+                            <input type="number" id="acoustic_frequency" step="0.1" placeholder="e.g., 1000.0" required>
+                            <span class="unit">Hz</span>
+                        </div>
+                    </div>
+
+                    <!-- Pressure Measurements -->
+                    <div class="form-section">
+                        <h3>💨 Pressure Measurements</h3>
+                        <div class="input-group">
+                            <label for="intake_pressure">Intake Pressure</label>
+                            <input type="number" id="intake_pressure" step="0.01" placeholder="e.g., 1.2" required>
+                            <span class="unit">bar</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="exhaust_pressure">Exhaust Pressure</label>
+                            <input type="number" id="exhaust_pressure" step="0.01" placeholder="e.g., 1.0" required>
+                            <span class="unit">bar</span>
+                        </div>
+                    </div>
+
+                    <!-- Additional Measurements -->
+                    <div class="form-section">
+                        <h3>📊 Additional Measurements</h3>
+                        <div class="input-group">
+                            <label for="frequency_band_energy">Frequency Band Energy</label>
+                            <input type="number" id="frequency_band_energy" step="0.1" placeholder="e.g., 55.0" required>
+                            <span class="unit">units</span>
+                        </div>
+                        <div class="input-group">
+                            <label for="amplitude_mean">Amplitude Mean</label>
+                            <input type="number" id="amplitude_mean" step="0.01" placeholder="e.g., 0.3" required>
+                            <span class="unit">units</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" id="analyzeBtn">🔍 Analyze Engine</button>
+                    <button type="button" id="clearBtn">🗑️ Clear All</button>
+                    <button type="button" id="sampleBtn">📝 Load Sample Data</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loadingIndicator" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing engine data...</p>
+        </div>
+
+        <div id="results" class="results hidden">
+            <h2>🔍 Diagnostic Results</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('diagnosticForm');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const sampleBtn = document.getElementById('sampleBtn');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const results = document.getElementById('results');
+            const resultContent = document.getElementById('resultContent');
+
+            // Form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Show loading
+                loadingIndicator.classList.remove('hidden');
+                results.classList.add('hidden');
+                analyzeBtn.disabled = true;
+                analyzeBtn.textContent = '🔄 Analyzing...';
+
+                try {
+                    // Collect form data
+                    const formData = new FormData(form);
+                    const data = {};
+                    
+                    // Map form fields to API expected format
+                    const fieldMapping = {
+                        'vibration_amplitude': 'Vibration_Amplitude',
+                        'rms_vibration': 'RMS_Vibration',
+                        'vibration_frequency': 'Vibration_Frequency',
+                        'surface_temperature': 'Surface_Temperature',
+                        'exhaust_temperature': 'Exhaust_Temperature',
+                        'acoustic_db': 'Acoustic_dB',
+                        'acoustic_frequency': 'Acoustic_Frequency',
+                        'intake_pressure': 'Intake_Pressure',
+                        'exhaust_pressure': 'Exhaust_Pressure',
+                        'frequency_band_energy': 'Frequency_Band_Energy',
+                        'amplitude_mean': 'Amplitude_Mean'
+                    };
+
+                    // Get all input values
+                    Object.keys(fieldMapping).forEach(fieldId => {
+                        const input = document.getElementById(fieldId);
+                        if (input && input.value) {
+                            data[fieldMapping[fieldId]] = parseFloat(input.value);
+                        }
+                    });
+
+                    // Send to API
+                    const response = await fetch('/api/ml-diagnose', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+                    
+                    // Hide loading
+                    loadingIndicator.classList.add('hidden');
+                    
+                    if (response.ok) {
+                        displayResults(result);
+                    } else {
+                        displayError(result.error || 'Analysis failed');
+                    }
+
+                } catch (error) {
+                    loadingIndicator.classList.add('hidden');
+                    displayError('Network error: ' + error.message);
+                } finally {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = '🔍 Analyze Engine';
+                }
+            });
+
+            // Clear form
+            clearBtn.addEventListener('click', function() {
+                form.reset();
+                results.classList.add('hidden');
+            });
+
+            // Load sample data
+            sampleBtn.addEventListener('click', function() {
+                const sampleData = {
+                    'vibration_amplitude': 0.45,
+                    'rms_vibration': 0.12,
+                    'vibration_frequency': 300.0,
+                    'surface_temperature': 85.0,
+                    'exhaust_temperature': 450.0,
+                    'acoustic_db': 72.0,
+                    'acoustic_frequency': 1000.0,
+                    'intake_pressure': 1.2,
+                    'exhaust_pressure': 1.0,
+                    'frequency_band_energy': 55.0,
+                    'amplitude_mean': 0.3
+                };
+
+                Object.keys(sampleData).forEach(fieldId => {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.value = sampleData[fieldId];
+                    }
+                });
+            });
+
+            function displayResults(result) {
+                const { status, is_anomaly, risk_level, anomalies_detected, total_anomalies } = result;
+                
+                let cardClass = 'normal';
+                let badgeClass = 'normal';
+                
+                if (is_anomaly) {
+                    if (risk_level === 'HIGH') {
+                        cardClass = 'critical';
+                        badgeClass = 'critical';
+                    } else if (risk_level === 'MEDIUM') {
+                        cardClass = 'warning';
+                        badgeClass = 'warning';
+                    }
+                }
+
+                let anomaliesHtml = '';
+                if (anomalies_detected && anomalies_detected.length > 0) {
+                    anomaliesHtml = `
+                        <div style="margin-top: 15px;">
+                            <strong>Issues Detected:</strong>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                ${anomalies_detected.map(anomaly => `<li>${anomaly}</li>`).join('')}
+                            </ul>
+                            ${total_anomalies > 3 ? `<p style="margin-top: 10px; color: #666;"><em>... and ${total_anomalies - 3} more issues</em></p>` : ''}
+                        </div>
+                    `;
+                }
+
+                // Get recommendations based on risk level
+                const recommendations = getRecommendations(risk_level, is_anomaly);
+
+                resultContent.innerHTML = `
+                    <div class="result-card ${cardClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="color: #333; margin: 0;">${status}</h3>
+                            <span class="status-badge ${badgeClass}">${risk_level} Risk</span>
+                        </div>
+                        
+                        <p style="margin-bottom: 15px; color: #666;">
+                            ${is_anomaly ? 
+                                'Potential engine issues detected. Review the details and recommendations below.' : 
+                                'All engine parameters are within normal operating range. Continue regular monitoring.'
+                            }
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <strong>Status:</strong><br>
+                                <span style="font-size: 1.2em;">${is_anomaly ? '⚠️ Anomaly' : '✅ Normal'}</span>
+                            </div>
+                            <div>
+                                <strong>Risk Level:</strong><br>
+                                <span style="font-size: 1.2em; color: ${risk_level === 'HIGH' ? '#dc3545' : risk_level === 'MEDIUM' ? '#ffc107' : '#28a745'};">${risk_level}</span>
+                            </div>
+                            ${total_anomalies > 0 ? `
+                            <div>
+                                <strong>Issues Found:</strong><br>
+                                <span style="font-size: 1.2em; color: #dc3545;">${total_anomalies}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${anomaliesHtml}
+                        ${recommendations}
+                    </div>
+                `;
+                
+                results.classList.remove('hidden');
+                results.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function getRecommendations(riskLevel, isAnomaly) {
+                if (!isAnomaly) {
+                    return `
+                        <div class="recommendation-box" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left-color: #28a745;">
+                            <h4 style="color: #155724;">✅ Recommended Actions:</h4>
+                            <ul style="color: #155724;">
+                                <li>Continue normal vehicle operation</li>
+                                <li>Maintain regular service intervals</li>
+                                <li>Monitor performance during routine use</li>
+                                <li>Keep diagnostic records for future reference</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                const recommendations = {
+                    'HIGH': {
+                        color: '#721c24',
+                        bgGradient: 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                        borderColor: '#dc3545',
+                        icon: '🚨',
+                        actions: [
+                            'Stop vehicle operation immediately',
+                            'Schedule urgent inspection with a qualified mechanic',
+                            'Check for unusual noises, vibrations, or smells',
+                            'Do not drive until issue is resolved',
+                            'Consider towing to repair facility if necessary'
+                        ]
+                    },
+                    'MEDIUM': {
+                        color: '#856404',
+                        bgGradient: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)',
+                        borderColor: '#ffc107',
+                        icon: '⚠️',
+                        actions: [
+                            'Schedule inspection within the next few days',
+                            'Monitor engine performance closely',
+                            'Check fluid levels and engine condition',
+                            'Avoid heavy loads or extreme conditions',
+                            'Keep detailed records of any changes'
+                        ]
+                    },
+                    'LOW': {
+                        color: '#0c5460',
+                        bgGradient: 'linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%)',
+                        borderColor: '#17a2b8',
+                        icon: '💡',
+                        actions: [
+                            'Schedule routine maintenance check',
+                            'Continue normal operation with monitoring',
+                            'Keep records of engine parameters',
+                            'Consider preventive maintenance',
+                            'Review maintenance schedule'
+                        ]
+                    }
+                };
+
+                const rec = recommendations[riskLevel] || recommendations['LOW'];
+                
+                return `
+                    <div class="recommendation-box" style="background: ${rec.bgGradient}; border-left-color: ${rec.borderColor};">
+                        <h4 style="color: ${rec.color};">${rec.icon} Recommended Actions:</h4>
+                        <ul style="color: ${rec.color};">
+                            ${rec.actions.map(action => `<li>${action}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            function displayError(error) {
+                resultContent.innerHTML = `
+                    <div class="result-card critical">
+                        <h3 style="color: #721c24;">❌ Analysis Error</h3>
+                        <p>${error}</p>
+                    </div>
+                `;
+                results.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
