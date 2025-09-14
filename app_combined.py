@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
 from speech.speech_handler import transcribe_audio_file, get_speech_status
 from speech.speech_utils import AudioValidator, AudioProcessor
+from youtube.youtube_handler import search_diagnostic_videos, search_manual_videos
+from youtube.youtube_config import is_youtube_available, validate_youtube_setup
 import tempfile
 # from PIL import Image
 # import io
@@ -200,8 +202,54 @@ def send_message():
             print(f"❌ Gemini API error: {e}")
             final_response = f"Sorry, I encountered an error while processing your request with Gemini AI: {str(e)}"
         
-        # Step 5: Return response for chatbot display
-        return jsonify({"reply": final_response})
+        # Step 4: Search for related YouTube videos (if OBD codes found)
+        video_results = None
+        if is_youtube_available():
+            try:
+                # Extract OBD codes and symptoms for video search
+                obd_codes = []
+                symptoms = []
+                
+                if nlp_results and nlp_results.get('matches'):
+                    # Get high-confidence OBD codes
+                    for match in nlp_results.get('matches', []):
+                        confidence = match.get('confidence_score', 0)
+                        if isinstance(confidence, str) and '%' in confidence:
+                            confidence = float(confidence.strip('%'))
+                        
+                        if confidence >= 70:  # Only high-confidence codes
+                            obd_codes.append(match.get('code_id', ''))
+                
+                # Get detected symptoms
+                analysis = nlp_results.get('analysis', {})
+                symptoms = analysis.get('detected_symptoms', [])
+                
+                # Search for videos if we have relevant data
+                if obd_codes or symptoms:
+                    print(f"🎥 Searching YouTube videos for codes: {obd_codes}, symptoms: {symptoms}")
+                    video_results = search_diagnostic_videos(
+                        obd_codes=obd_codes,
+                        symptoms=symptoms,
+                        user_prompt=user_message,
+                        max_results=3
+                    )
+                    
+                    if video_results and video_results.get('has_videos'):
+                        print(f"✅ Found {video_results['count']} relevant videos")
+                    else:
+                        print("ℹ️ No relevant videos found")
+                        
+            except Exception as video_error:
+                print(f"⚠️ YouTube video search error: {video_error}")
+                video_results = None
+        
+        # Step 5: Build complete response with videos
+        response_data = {"reply": final_response}
+        
+        if video_results and video_results.get('has_videos'):
+            response_data["videos"] = video_results
+        
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"❌ General error in send_message: {e}")
@@ -450,12 +498,52 @@ def speech_status():
             "whisper_available": False
         }), 500
 
+@app.route("/search_youtube", methods=["POST"])
+def search_youtube():
+    """Manual YouTube video search endpoint"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        
+        if not query:
+            return jsonify({"error": "Query parameter is required"}), 400
+            
+        if not is_youtube_available():
+            return jsonify({"error": "YouTube search is not available"}), 503
+        
+        # Perform manual search
+        video_results = search_manual_videos(query, max_results=5)
+        
+        if video_results and video_results.get('has_videos'):
+            return jsonify({
+                "success": True,
+                "videos": video_results
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No videos found for your search query"
+            })
+            
+    except Exception as e:
+        print(f"❌ YouTube search error: {e}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
+
+@app.route("/youtube_status", methods=["GET"])
+def youtube_status():
+    """Check YouTube search availability"""
+    return jsonify({
+        "available": is_youtube_available(),
+        "message": "YouTube search is ready" if is_youtube_available() else "YouTube API not configured"
+    })
+
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint to verify system status"""
     return jsonify({
         "nlp_available": nlp_available,
         "llm_available": llm_available,
+        "youtube_available": is_youtube_available(),
         "status": "healthy" if (nlp_available and llm_available) else "degraded",
         "diagnostic_processor": "available" if diagnostic_processor else "unavailable",
         "gemini_api": "configured" if llm_available else "not configured"

@@ -20,7 +20,7 @@
 
       .header {
         text-align: center;
-        color: rgb(0,0,72); /* Navy blue font color */
+        color: rgb(0, 0, 72); /* Navy blue font color */
         margin-bottom: 30px;
       }
 
@@ -52,7 +52,7 @@
       }
 
       .chat-header {
-        background: rgb(0,0,72);
+        background: rgb(0, 0, 72);
         color: white;
         padding: 20px;
         text-align: center;
@@ -80,7 +80,11 @@
       }
 
       .example-button {
-        background: linear-gradient(90deg, rgb(0,0,72) 0%, rgb(0,0,120) 100%);
+        background: linear-gradient(
+          90deg,
+          rgb(0, 0, 72) 0%,
+          rgb(0, 0, 120) 100%
+        );
         color: white;
         border: none;
         padding: 8px 12px;
@@ -200,7 +204,7 @@
 
       #send-button,
       #image-button {
-        background: rgb(0,0,72);
+        background: rgb(0, 0, 72);
         color: white;
         border: none;
         border-radius: 50%;
@@ -332,14 +336,18 @@
         left: 0;
         width: 230px;
         height: 100vh;
-        background: linear-gradient(180deg, rgb(0,0,72) 0%, rgb(0,0,120) 100%);
+        background: linear-gradient(
+          180deg,
+          rgb(0, 0, 72) 0%,
+          rgb(0, 0, 120) 100%
+        );
         color: white;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         padding: 30px 0 20px 0;
         z-index: 100;
-        box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
       }
 
       .sidebar-header {
@@ -370,7 +378,7 @@
       }
 
       .sidebar-menu li:hover {
-        background: rgba(255,255,255,0.08);
+        background: rgba(255, 255, 255, 0.08);
       }
 
       @media (max-width: 768px) {
@@ -412,6 +420,163 @@
           display: none;
         }
       }
+
+      /* YouTube Video Styles */
+      .video-container {
+        margin: 15px 0;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .video-header {
+        margin-bottom: 15px;
+        text-align: center;
+      }
+
+      .video-header h3 {
+        color: rgb(0, 0, 72);
+        margin-bottom: 5px;
+        font-size: 1.3em;
+      }
+
+      .video-header p {
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .video-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .video-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .video-thumbnail {
+        position: relative;
+        width: 100%;
+        height: 160px;
+        overflow: hidden;
+      }
+
+      .video-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .video-duration {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75em;
+      }
+
+      .video-info {
+        padding: 12px;
+      }
+
+      .video-title {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .video-channel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+
+      .channel-name {
+        font-size: 0.85em;
+        color: #666;
+        font-weight: 500;
+      }
+
+      .trusted-badge {
+        background: #28a745;
+        color: white;
+        font-size: 0.7em;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+
+      .video-stats {
+        font-size: 0.8em;
+        color: #888;
+        margin-bottom: 8px;
+      }
+
+      .video-stats .views {
+        margin-right: 10px;
+      }
+
+      .video-description {
+        font-size: 0.8em;
+        color: #666;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .watch-button {
+        display: inline-block;
+        background: rgb(0, 0, 72);
+        color: white;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 0.85em;
+        font-weight: 500;
+        transition: background 0.2s ease;
+        text-align: center;
+      }
+
+      .watch-button:hover {
+        background: rgb(0, 0, 100);
+        text-decoration: none;
+        color: white;
+      }
+
+      @media (max-width: 768px) {
+        .video-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .video-card {
+          margin-bottom: 10px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -439,7 +604,7 @@
         </div>
 
         <div class="examples-section">
-          <div class="examples-title"> Try these examples:</div>
+          <div class="examples-title">Try these examples:</div>
           <div class="example-buttons">
             <button
               class="example-button"
@@ -593,6 +758,71 @@
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
+      function displayVideoResults(videoData) {
+        if (!videoData || !videoData.has_videos || !videoData.videos) {
+          return;
+        }
+
+        // Create container for videos
+        const videoContainer = document.createElement("div");
+        videoContainer.className = "video-container";
+
+        // Add header
+        const videoHeader = document.createElement("div");
+        videoHeader.className = "video-header";
+        videoHeader.innerHTML = `
+          <h3>🎥 Recommended Repair Videos</h3>
+          <p>Found ${videoData.count} relevant videos from trusted automotive channels</p>
+        `;
+        videoContainer.appendChild(videoHeader);
+
+        // Add video cards
+        const videoGrid = document.createElement("div");
+        videoGrid.className = "video-grid";
+
+        videoData.videos.forEach((video) => {
+          const videoCard = document.createElement("div");
+          videoCard.className = "video-card";
+
+          videoCard.innerHTML = `
+            <div class="video-thumbnail">
+              <img src="${video.thumbnail_url}" alt="${
+            video.title
+          }" loading="lazy">
+              <div class="video-duration">${video.duration || ""}</div>
+            </div>
+            <div class="video-info">
+              <h4 class="video-title">${video.title}</h4>
+              <div class="video-channel">
+                <span class="channel-name">${video.channel_title}</span>
+                ${
+                  video.is_trusted
+                    ? '<span class="trusted-badge">✓ Trusted</span>'
+                    : ""
+                }
+              </div>
+              <div class="video-stats">
+                <span class="views">${video.view_count || "N/A"} views</span>
+                <span class="published">${video.published_at || ""}</span>
+              </div>
+              <div class="video-description">${video.description || ""}</div>
+              <a href="${
+                video.url
+              }" target="_blank" class="watch-button" rel="noopener noreferrer">
+                Watch Video →
+              </a>
+            </div>
+          `;
+
+          videoGrid.appendChild(videoCard);
+        });
+
+        videoContainer.appendChild(videoGrid);
+
+        // Add as a bot message
+        addMessage(videoContainer);
+      }
+
       function showLoading() {
         addMessage(
           `<div class="loading">Analyzing your request and generating response<span class="loading-dots"></span></div>`
@@ -645,6 +875,11 @@
 
           // Display the Gemini AI response (which includes NLP analysis)
           addMessage(data.reply || "Sorry, I could not process your request.");
+
+          // Display YouTube videos if available
+          if (data.videos && data.videos.has_videos) {
+            displayVideoResults(data.videos);
+          }
 
           // Clear image after sending
           if (selectedImage) {
