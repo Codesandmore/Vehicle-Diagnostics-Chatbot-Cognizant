@@ -10,6 +10,7 @@ from speech.speech_utils import AudioValidator, AudioProcessor
 from youtube.youtube_handler import search_diagnostic_videos, search_manual_videos
 from youtube.youtube_config import is_youtube_available, validate_youtube_setup
 import tempfile
+import math
 # from PIL import Image
 # import io
 # import json
@@ -65,6 +66,98 @@ except Exception as e:
     print(f"❌ Error initializing enhanced diagnostic processor: {e}")
     diagnostic_processor = None
     nlp_available = False
+
+# ML Diagnostics Configuration
+FEATURES = [
+    "Vibration_Amplitude",
+    "RMS_Vibration", 
+    "Vibration_Frequency",
+    "Surface_Temperature",
+    "Exhaust_Temperature",
+    "Acoustic_dB",
+    "Acoustic_Frequency",
+    "Intake_Pressure",
+    "Exhaust_Pressure",
+    "Frequency_Band_Energy",
+    "Amplitude_Mean"
+]
+
+# Normal operating ranges for rule-based detection
+NORMAL_RANGES = {
+    "Vibration_Amplitude": (0.1, 0.8),
+    "RMS_Vibration": (0.05, 0.25),
+    "Vibration_Frequency": (100, 500),
+    "Surface_Temperature": (60, 120),
+    "Exhaust_Temperature": (200, 600),
+    "Acoustic_dB": (50, 85),
+    "Acoustic_Frequency": (500, 2000),
+    "Intake_Pressure": (0.8, 2.0),
+    "Exhaust_Pressure": (0.5, 1.5),
+    "Frequency_Band_Energy": (20, 80),
+    "Amplitude_Mean": (0.1, 0.6)
+}
+
+def predict_anomaly_rule_based(input_data):
+    """Rule-based anomaly detection for demo purposes"""
+    try:
+        anomalies = []
+        scores = []
+        
+        for feature in FEATURES:
+            if feature not in input_data:
+                return {"error": f"Missing feature: {feature}"}
+            
+            value = float(input_data[feature])
+            min_val, max_val = NORMAL_RANGES[feature]
+            
+            # Calculate how far outside normal range
+            if value < min_val:
+                deviation = (min_val - value) / min_val
+                anomalies.append(f"{feature} too low ({value:.2f} < {min_val})")
+                scores.append(deviation)
+            elif value > max_val:
+                deviation = (value - max_val) / max_val
+                anomalies.append(f"{feature} too high ({value:.2f} > {max_val})")
+                scores.append(deviation)
+            else:
+                # Within normal range
+                scores.append(0)
+        
+        # Calculate overall anomaly score
+        max_deviation = max(scores) if scores else 0
+        avg_deviation = sum(scores) / len(scores) if scores else 0
+        
+        # Determine if anomalous
+        is_anomaly = len(anomalies) > 0 or max_deviation > 0.2
+        anomaly_score = max_deviation + (avg_deviation * 0.3)
+        
+        # Determine status and risk
+        if is_anomaly:
+            if max_deviation > 0.5:
+                risk_level = "HIGH"
+                status = "CRITICAL ANOMALY DETECTED"
+            elif max_deviation > 0.3:
+                risk_level = "MEDIUM"
+                status = "ANOMALY DETECTED"
+            else:
+                risk_level = "LOW"
+                status = "MINOR ANOMALY DETECTED"
+        else:
+            risk_level = "LOW"
+            status = "NORMAL"
+        
+        return {
+            "status": status,
+            "is_anomaly": is_anomaly,
+            "anomaly_score": round(anomaly_score, 4),
+            "confidence": round(max_deviation, 4),
+            "risk_level": risk_level,
+            "anomalies_detected": anomalies[:3],  # Show top 3 issues
+            "total_anomalies": len(anomalies)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.route("/")
 def index():
@@ -335,7 +428,7 @@ def diagnose():
     try:
         data = request.get_json()
         user_input = data.get("message", "").strip()
-        confidence_threshold = data.get("confidence_threshold", 70.0)
+        confidence_threshold = data.get("confidence_threshold", 50.0)
         
         if not user_input:
             return jsonify({
@@ -547,6 +640,40 @@ def health():
         "status": "healthy" if (nlp_available and llm_available) else "degraded",
         "diagnostic_processor": "available" if diagnostic_processor else "unavailable",
         "gemini_api": "configured" if llm_available else "not configured"
+    })
+
+@app.route("/ml-diagnostics")
+def ml_diagnostics():
+    """ML Diagnostics page for vehicle engine anomaly detection"""
+    return render_template("ml_diagnostics.html")
+
+@app.route("/api/ml-diagnose", methods=["POST"])
+def ml_diagnose():
+    """API endpoint for ML-based vehicle diagnostics"""
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Predict anomaly using rule-based system
+        result = predict_anomaly_rule_based(data)
+        
+        if "error" in result:
+            return jsonify(result), 400
+            
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/ml-ranges", methods=["GET"])
+def get_ml_normal_ranges():
+    """Get normal operating ranges for ML diagnostics reference"""
+    return jsonify({
+        "normal_ranges": NORMAL_RANGES,
+        "features": FEATURES
     })
 
 if __name__ == "__main__":
