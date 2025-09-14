@@ -67,8 +67,20 @@
         background: var(--bg-color);
         color: var(--text-color);
         min-height: 100vh;
-        padding: 30px; /* Increased padding for better spacing */
         transition: background 0.3s ease, color 0.3s ease;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Main content wrapper */
+      .content-wrapper {
+        margin-left: 250px; /* Account for sidebar width */
+        min-height: 100vh;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: margin-left 0.3s ease;
       }
 
       .header {
@@ -149,13 +161,15 @@
       }
 
       .main-container {
-        max-width: 1200px; /* Significantly increased width */
-        margin: 0 auto; /* Centralized */
+        width: 100%;
+        max-width: 1000px; /* Responsive max width */
         background: var(--container-bg);
         border-radius: 20px;
         overflow: hidden;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         transition: background 0.3s ease;
+        position: relative;
+        z-index: 10; /* Ensure main content is above sidebar */
       }
 
       .chat-container {
@@ -479,6 +493,25 @@
         color: #007bff;
       }
 
+      /* Small phones */
+      @media (max-width: 480px) {
+        .content-wrapper {
+          padding: 10px;
+        }
+
+        .main-container {
+          border-radius: 8px;
+          height: calc(100vh - 20px);
+        }
+
+        .mobile-menu-toggle {
+          top: 15px;
+          left: 15px;
+          padding: 8px 10px;
+          font-size: 16px;
+        }
+      }
+
       .message.bot .message-content code {
         background: #f8f9fa;
         padding: 2px 4px;
@@ -535,16 +568,95 @@
         background: var(--sidebar-hover);
       }
 
-      @media (max-width: 768px) {
-        body {
-          padding: 15px; /* Adjusted mobile padding */
+      /* Mobile Menu Toggle Button */
+      .mobile-menu-toggle {
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: rgb(0, 0, 72);
+        color: white;
+        border: none;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 18px;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: background 0.3s ease;
+      }
+
+      .mobile-menu-toggle:hover {
+        background: rgb(0, 0, 100);
+      }
+
+      /* Large screens */
+      @media (min-width: 1400px) {
+        .content-wrapper {
+          padding: 40px;
         }
 
         .main-container {
-          margin: 10px;
-          height: calc(100vh - 20px);
+          max-width: 1200px;
+        }
+      }
+
+      /* Extra large screens */
+      @media (min-width: 1800px) {
+        .content-wrapper {
+          padding: 60px;
+        }
+
+        .main-container {
+          max-width: 1400px;
+        }
+      }
+
+      /* Tablet and medium screens */
+      @media (max-width: 1024px) and (min-width: 769px) {
+        .content-wrapper {
+          padding: 20px;
+        }
+
+        .main-container {
+          max-width: 900px;
+        }
+
+        .sidebar {
+          width: 200px;
+        }
+
+        .content-wrapper {
+          margin-left: 200px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .content-wrapper {
+          margin-left: 0; /* Remove sidebar margin on mobile */
+          padding: 15px; /* Adjusted mobile padding */
+        }
+
+        .mobile-menu-toggle {
+          display: block; /* Show toggle button on mobile */
+        }
+
+        .sidebar {
+          transform: translateX(-100%); /* Hide sidebar on mobile by default */
+          transition: transform 0.3s ease;
+        }
+
+        .sidebar.active {
+          transform: translateX(0); /* Show sidebar when active */
+          z-index: 1000; /* Higher z-index for mobile overlay */
+        }
+
+        .main-container {
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          height: calc(100vh - 30px);
           border-radius: 10px;
-          margin-left: 0; /* Reset margin for small screens */
         }
 
         .chat-container {
@@ -740,8 +852,11 @@
     </style>
   </head>
   <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+    
     <!-- Sidebar markup -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
       <div class="sidebar-header">Doc Hudson</div>
       <ul class="sidebar-menu">
         <li><span>🏠</span> Home</li>
@@ -760,20 +875,22 @@
       </div>
     </div>
 
-    <div class="header">
-      <h1>Vehicle Diagnostics Chatbot</h1>
-      <p>Smart diagnostics powered by NLP and AI technology</p>
-      
-      <!-- User Info and Logout -->
-      {% if user %}
-      <div class="logout-container">
-        <span class="user-info">👤 {{ user.email or 'User' }}</span>
-        <button class="logout-btn" onclick="handleLogout()">
-          🚪 Sign Out
-        </button>
+    <!-- Main content wrapper -->
+    <div class="content-wrapper">
+      <div class="header">
+        <h1>Vehicle Diagnostics Chatbot</h1>
+        <p>Smart diagnostics powered by NLP and AI technology</p>
+        
+        <!-- User Info and Logout -->
+        {% if user %}
+        <div class="logout-container">
+          <span class="user-info">👤 {{ user.email or 'User' }}</span>
+          <button class="logout-btn" onclick="handleLogout()">
+            🚪 Sign Out
+          </button>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
-    </div>
 
     <div class="main-container">
       <div class="chat-container">
@@ -1207,6 +1324,24 @@
         }
       }
 
+      // Mobile Menu Toggle
+      function toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('active');
+      }
+
+      // Close mobile menu when clicking outside
+      document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.querySelector('.mobile-menu-toggle');
+        
+        if (window.innerWidth <= 768) {
+          if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
+            sidebar.classList.remove('active');
+          }
+        }
+      });
+
       // Load saved theme on page load
       document.addEventListener('DOMContentLoaded', function() {
         const savedTheme = localStorage.getItem('theme');
@@ -1221,5 +1356,6 @@
 
     <!-- Speech Recognition Module -->
     <script src="{{ url_for('static', filename='speech_recognition.js') }}"></script>
+    </div> <!-- End content-wrapper -->
   </body>
 </html>
