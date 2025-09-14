@@ -19,7 +19,7 @@ python-Levenshtein==0.21.1
 python-dotenv==1.0.0
 
 # Utilities
-requests==2.31.0
+requests==2.29.0
 
 # Firebase Authentication
 pyrebase4==4.7.1
