@@ -6,8 +6,27 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_session import Session
 from dotenv import load_dotenv
 from nlp.enhanced_diagnostic_processor import EnhancedDiagnosticProcessor
-from speech.speech_handler import transcribe_audio_file, get_speech_status
-from speech.speech_utils import AudioValidator, AudioProcessor
+
+# Optional speech recognition imports (may not be available in production)
+try:
+    from speech.speech_handler import transcribe_audio_file, get_speech_status
+    from speech.speech_utils import AudioValidator, AudioProcessor
+    speech_available = True
+    print("✅ Speech recognition available")
+except ImportError as e:
+    print(f"⚠️ Speech recognition not available (production mode): {e}")
+    speech_available = False
+    # Create dummy functions for graceful fallback
+    def transcribe_audio_file(*args, **kwargs):
+        return {"success": False, "error": "Speech recognition not available in this deployment"}
+    def get_speech_status(*args, **kwargs):
+        return {"success": False, "whisper_available": False, "error": "Speech recognition not available"}
+    class AudioValidator:
+        def validate_file(self, *args): return False, "Speech recognition not available"
+    class AudioProcessor:
+        def save_temp_file(self, *args): return None
+        def cleanup_temp_file(self, *args): pass
+
 from youtube.youtube_handler import search_diagnostic_videos, search_manual_videos
 from youtube.youtube_config import is_youtube_available, validate_youtube_setup
 import tempfile
@@ -23,6 +42,7 @@ from firebase_config import FIREBASE_CONFIG
 def ensure_ffmpeg_path():
     """Ensure FFmpeg is accessible by adding common installation paths"""
     ffmpeg_paths = [
+        os.path.join(os.path.dirname(__file__), 'ffmpeg', 'bin'),  # Root directory of project
         r'C:\ffmpeg\bin',
         r'C:\Program Files\ffmpeg\bin', 
         r'C:\ProgramData\chocolatey\bin',
@@ -358,11 +378,11 @@ def send_message():
             try:
                 print(f"🔍 Processing with enhanced NLP routing: {user_message}")
                 
-                # Use enhanced processor with 90% confidence threshold
+                # Use enhanced processor with 70% confidence threshold
                 nlp_results = diagnostic_processor.process_user_input(
                     user_message, 
                     top_n=5, 
-                    confidence_threshold=90.0
+                    confidence_threshold=70.0
                 )
                 
                 routing_decision = nlp_results.get('analysis', {}).get('routing_decision', 'LLM_ONLY')
@@ -397,6 +417,7 @@ def send_message():
         If there are clarity issues in the user's description, ask clarifying questions.
         Provide step-by-step solutions, safety tips, and maintenance advice.
         Always prioritize safety and recommend professional help when necessary.
+        If diagnostic codes are not provided, limit the word count in your response to 300 words.
         """
         
         # Build enhanced prompt based on routing decision
@@ -683,7 +704,16 @@ def diagnose():
 
 @app.route("/transcribe_audio", methods=["POST"])
 def transcribe_audio():
-    """Speech-to-text endpoint using OpenAI Whisper"""
+    """Speech-to-text endpoint using OpenAI Whisper (if available)"""
+    # Check if speech recognition is available
+    if not speech_available:
+        return jsonify({
+            "error": "Speech recognition is not available in this deployment. This feature has been disabled to reduce app size for cloud deployment.",
+            "success": False,
+            "feature_disabled": True,
+            "suggestion": "Please type your message instead of using voice input."
+        }), 503
+    
     try:
         if 'audio' not in request.files:
             return jsonify({
@@ -748,6 +778,15 @@ def transcribe_audio():
 @app.route("/speech_status", methods=["GET"])
 def speech_status():
     """Check speech recognition system status"""
+    if not speech_available:
+        return jsonify({
+            "success": False,
+            "whisper_available": False,
+            "speech_available": False,
+            "error": "Speech recognition disabled for cloud deployment",
+            "message": "Speech features are not available in this deployment to reduce app size."
+        })
+    
     try:
         status = get_speech_status()
         return jsonify(status)
@@ -804,10 +843,18 @@ def health():
     return jsonify({
         "nlp_available": nlp_available,
         "llm_available": llm_available,
+        "speech_available": speech_available,
         "youtube_available": is_youtube_available(),
         "status": "healthy" if (nlp_available and llm_available) else "degraded",
         "diagnostic_processor": "available" if diagnostic_processor else "unavailable",
-        "gemini_api": "configured" if llm_available else "not configured"
+        "gemini_api": "configured" if llm_available else "not configured",
+        "deployment_mode": "production" if not speech_available else "development",
+        "features": {
+            "nlp_diagnosis": nlp_available,
+            "ai_chat": llm_available,
+            "speech_to_text": speech_available,
+            "youtube_videos": is_youtube_available()
+        }
     })
 
 @app.route("/ml-diagnostics")
@@ -848,5 +895,9 @@ if __name__ == "__main__":
     print("🚗 Starting Vehicle Diagnostics AI Chatbot...")
     print(f"📊 NLP Diagnosis: {'✅ Available' if nlp_available else '❌ Not Available'}")
     print(f"🤖 Gemini AI: {'✅ Available' if llm_available else '❌ Not Available'}")
+    print(f"🎤 Speech Recognition: {'✅ Available' if speech_available else '❌ Disabled (Production Mode)'}")
+    print(f"🎥 YouTube Integration: {'✅ Available' if is_youtube_available() else '❌ Not Available'}")
+    if not speech_available:
+        print("ℹ️  Speech features disabled to reduce deployment size")
     print("🌐 Access at: http://127.0.0.1:5000")
     app.run(debug=True, host='127.0.0.1', port=5000)
